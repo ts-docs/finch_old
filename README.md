@@ -1,2 +1,3 @@
 # finch
-A template engine written for node.js
+
+A template engine for node.js
