@@ -1,4 +1,6 @@
 use neon::prelude::*;
+mod pre_compiler;
+mod compiler;
 
 fn hello(mut cx: FunctionContext) -> JsResult<JsString> {
     Ok(cx.string("hello node"))
