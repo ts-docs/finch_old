@@ -4,24 +4,27 @@ mod error;
 use parser::{Parser, ExpressionKind, TemplateKind, BinaryOps, UnaryOps};
 
 
-fn exp_to_str(exp: &ExpressionKind, pos: &std::ops::Range<usize>) -> String {
+fn exp_to_str(exp: &ExpressionKind) -> String {
     match exp {
-        ExpressionKind::String(st) => format!("Str: {} ({:?})", st, pos),
-        ExpressionKind::Var(v) => format!("Var: {} ({:?})", v, pos),
-        ExpressionKind::Number(v) => format!("Num: {} ({:?})", v, pos),
-        ExpressionKind::Bool(v) => format!("Bool: {} ({:?})", v, pos),
-        ExpressionKind::Undefined => format!("Undefined ({:?})", pos),
-        ExpressionKind::Null => format!("Null ({:?})", pos),
-        ExpressionKind::VarDot(v) => format!("VarDot: {} ({:?})", v.join("."), pos),
+        ExpressionKind::String(st) => format!("\"{}\"", st),
+        ExpressionKind::Var(v) => format!("{}", v),
+        ExpressionKind::Number(v) => format!("{}", v),
+        ExpressionKind::Bool(v) => format!("{}", v),
+        ExpressionKind::Undefined => format!("undefined"),
+        ExpressionKind::Null => format!("null"),
+        ExpressionKind::VarDot(v) => format!("{}", v.join(".")),
         ExpressionKind::Binary(v) => {
             match &**v {
-                BinaryOps::Compare(left, right) => format!("Binary: {} == {}", exp_to_str(&left, pos), exp_to_str(&right, pos)),
+                BinaryOps::Compare(left, right) => format!("({} == {})", exp_to_str(&left), exp_to_str(&right)),
+                BinaryOps::Not(left, right) => format!("({} != {})", exp_to_str(&left), exp_to_str(&right)),
+                BinaryOps::And(left, right) => format!("({} && {})", exp_to_str(&left), exp_to_str(&right)),
+                BinaryOps::Or(left, right) => format!("({} || {})", exp_to_str(&left), exp_to_str(&right)),
                 _ => format!("UNKNOWNLOL")
             }
         }
         ExpressionKind::Unary(v) => {
             match &**v {
-                UnaryOps::Not(exp) => format!("Unary NOT: !{}", exp_to_str(exp, pos))
+                UnaryOps::Not(exp) => format!("!{}", exp_to_str(exp))
             }
         }
         _ => String::from("Some expression IDK")
@@ -32,7 +35,7 @@ fn hello(mut cx: FunctionContext) -> JsResult<JsString> {
     let res = Parser::parse(&cx.argument::<JsString>(0)?.value(&mut cx)).unwrap();
     println!("{:?} {}", res.1.templates.iter().map(|i| {
         match &i.kind {
-            TemplateKind::Expression(exp) => exp_to_str(exp, &i.pos),
+            TemplateKind::Expression(exp) => exp_to_str(exp),
             _ => String::from("block")
         }
     }).collect::<Vec<String>>().join(", "), res.1.templates.len());

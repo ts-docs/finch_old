@@ -6,13 +6,19 @@ use crate::error::*;
 type Data<'a> = Peekable<std::str::CharIndices<'a>>;
 type FinchResult<R> = Result<R, FinchError>;
 
+static COMPARE_PREC: i8 = 5;
+static AND_PREC: i8 = 10;
+static OR_PREC: i8 = 7;
+
 pub enum BinaryOps {
     Compare(ExpressionKind, ExpressionKind), 
     Not(ExpressionKind, ExpressionKind),
     Gt(ExpressionKind, ExpressionKind),
     Lt(ExpressionKind, ExpressionKind),
     Gte(ExpressionKind, ExpressionKind),
-    Lte(ExpressionKind, ExpressionKind)
+    Lte(ExpressionKind, ExpressionKind),
+    And(ExpressionKind, ExpressionKind),
+    Or(ExpressionKind, ExpressionKind)
 }
 
 pub enum UnaryOps {
@@ -109,7 +115,7 @@ impl<'a> Parser<'a> {
         let current = self.data.next().ok_or(FinchError::none())?;
         match current.1 {
             '"' => Ok(ExpressionKind::String(self.parse_string()?)),
-            '0'..='9' => Ok(ExpressionKind::Number(self.parse_number(current.1)?)),
+            '0'..='9' | '-' => Ok(ExpressionKind::Number(self.parse_number(current.1)?)),
             'a'..='z' | 'A'..='Z' | '_' | '$' => Ok(self.parse_possible_var(current.1)?),
             ' ' => {
                 self.skip_while(' ');
@@ -130,21 +136,50 @@ impl<'a> Parser<'a> {
 
     pub fn parse_full_expression(&mut self) -> FinchResult<(usize, ExpressionKind)> {
         let exp = self.parse_expression()?;
-        self.parse_followup(exp)
+        self.parse_possibly_binary(exp, -1)
     }
 
-    fn parse_followup(&mut self, res: ExpressionKind) -> FinchResult<(usize, ExpressionKind)> {
+    fn parse_possibly_binary(&mut self, res: ExpressionKind, prec: i8) -> FinchResult<(usize, ExpressionKind)> {
         let followup = self.data.peek().ok_or(FinchError::none())?;
         let followup_end = followup.0;
         match followup.1 {
-            '=' => {
+            '=' => { // ==
                 self.data.next();
                 self.skip_token('=')?;
-                Ok((followup_end, ExpressionKind::Binary(Box::new(BinaryOps::Compare(res, self.parse_expression()?)))))
+                let right = self.parse_expression()?;
+                self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Compare(res, right))), COMPARE_PREC)
             },
+            '!' => { // !=
+                self.data.next();
+                self.skip_token('=')?;
+                let right = self.parse_expression()?;
+                self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Not(res, right))), COMPARE_PREC)
+            }
+            '&' => {
+                self.data.next();
+                self.skip_token('&')?;
+                if AND_PREC > prec {
+                    let right = self.parse_full_expression()?.1;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::And(res, right))), AND_PREC)
+                } else {
+                    let right = self.parse_expression()?;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::And(res, right))), AND_PREC)
+                }
+            }
+            '|' => {
+                self.data.next();
+                self.skip_token('|')?;
+                if OR_PREC > prec {
+                    let right = self.parse_full_expression()?.1;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Or(res, right))), OR_PREC)
+                } else {
+                    let right = self.parse_expression()?;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Or(res, right))), OR_PREC)
+                }
+            }
             ' ' => {
                 self.skip_while(' ');
-                self.parse_followup(res)
+                self.parse_possibly_binary(res, prec)
             }
             _ => Ok((followup_end, res))
         }
@@ -250,22 +285,19 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn skip_while(&mut self, ch: char) -> usize {
+    fn skip_while(&mut self, ch: char) {
         let mut character = self.data.peek();
-        let mut count: usize = 0;
         loop {
             if let Some(unwrapped) = character {
                 if unwrapped.1 == ch {
                     self.data.next();
                     character = self.data.peek();
-                    count += 1;
                 }
                 else {
                     break;
                 }
             }
         }
-        count
     }
 
 }
