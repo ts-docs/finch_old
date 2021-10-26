@@ -28,6 +28,11 @@ There are three types of building blocks in finch:
 
 Available operators: `==`, `!=`, `>`, `<`, `<=`, `>=`.
 
+#### Logic
+
+`&&` - AND
+`||` - OR
+
 #### Function calls
 
 Where `arg1` - `argN` are other expressions.
