@@ -1,24 +1,33 @@
 use neon::prelude::*;
 mod parser;
 mod error;
-use parser::{Parser, ExpressionKind, TemplateKind};
+use parser::{Parser, ExpressionKind, TemplateKind, BinaryOps};
+
+
+fn exp_to_str(exp: &ExpressionKind, pos: &std::ops::Range<usize>) -> String {
+    match exp {
+        ExpressionKind::String(st) => format!("Str: {} ({:?})", st, pos),
+        ExpressionKind::Var(v) => format!("Var: {} ({:?})", v, pos),
+        ExpressionKind::Number(v) => format!("Num: {} ({:?})", v, pos),
+        ExpressionKind::Bool(v) => format!("Bool: {} ({:?})", v, pos),
+        ExpressionKind::Undefined => format!("Undefined ({:?})", pos),
+        ExpressionKind::Null => format!("Null ({:?})", pos),
+        ExpressionKind::VarDot(v) => format!("VarDot: {} ({:?})", v.join("."), pos),
+        ExpressionKind::Binary(v) => {
+            match &**v {
+                BinaryOps::Compare(left, right) => format!("Binary: {} == {}", exp_to_str(&left, pos), exp_to_str(&right, pos)),
+                _ => format!("UNKNOWNLOL")
+            }
+        }
+        _ => String::from("Some expression IDK")
+    }
+}
 
 fn hello(mut cx: FunctionContext) -> JsResult<JsString> {
     let res = Parser::parse(&cx.argument::<JsString>(0)?.value(&mut cx)).unwrap();
     println!("{:?} {}", res.1.templates.iter().map(|i| {
         match &i.kind {
-            TemplateKind::Expression(exp) => {
-                match &exp {
-                    ExpressionKind::String(st) => format!("Str: {} ({:?})", st, i.pos),
-                    ExpressionKind::Var(v) => format!("Var: {} ({:?})", v, i.pos),
-                    ExpressionKind::Number(v) => format!("Num: {} ({:?})", v, i.pos),
-                    ExpressionKind::Bool(v) => format!("Bool: {} ({:?})", v, i.pos),
-                    ExpressionKind::Undefined => format!("Undefined ({:?})", i.pos),
-                    ExpressionKind::Null => format!("Null ({:?})", i.pos),
-                    ExpressionKind::VarDot(v) => format!("VarDot: {} ({:?})", v.join("."), i.pos),
-                    _ => String::from("Some expression IDK")
-                }
-            }
+            TemplateKind::Expression(exp) => exp_to_str(exp, &i.pos),
             _ => String::from("block")
         }
     }).collect::<Vec<String>>().join(", "), res.1.templates.len());

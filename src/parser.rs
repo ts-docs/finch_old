@@ -6,6 +6,15 @@ use crate::error::*;
 type Data<'a> = Peekable<std::str::CharIndices<'a>>;
 type FinchResult<R> = Result<R, FinchError>;
 
+pub enum BinaryOps {
+    Compare(ExpressionKind, ExpressionKind), 
+    Not(ExpressionKind, ExpressionKind),
+    Gt(ExpressionKind, ExpressionKind),
+    Lt(ExpressionKind, ExpressionKind),
+    Gte(ExpressionKind, ExpressionKind),
+    Lte(ExpressionKind, ExpressionKind)
+}
+
 pub enum ExpressionKind {
     Var(String),
     VarDot(Vec<String>),
@@ -14,11 +23,7 @@ pub enum ExpressionKind {
     Bool(bool),
     Undefined,
     Null,
-    Binary {
-        left: Box<ExpressionKind>,
-        right: Box<ExpressionKind>,
-        op: String
-    },
+    Binary(Box<BinaryOps>),
     Call {
         var: Box<ExpressionKind>,
         params: Vec<ExpressionKind>
@@ -93,36 +98,42 @@ impl<'a> Parser<'a> {
 
     pub fn parse_expression(&mut self) -> FinchResult<(usize, ExpressionKind)> {
         let current = self.data.next().ok_or(FinchError::none())?;
-        let mut exp_end: usize = 0; 
         let res = match current.1 {
-            '"' => {
-                let res = self.parse_string()?;
-                exp_end = res.0;
-                ExpressionKind::String(res.1)
+            '"' => ExpressionKind::String(self.parse_string()?),
+            '1'..='9' => ExpressionKind::Number(self.parse_number(current.1)?),
+            'a'..='z' | 'A'..='Z' | '_' | '$' => self.parse_possible_var(current.1)?,
+            ' ' => {
+                self.skip_while(' ');
+                self.parse_expression()?.1
             },
-            '1'..='9' => {
-                let res = self.parse_number(current.1)?;
-                exp_end = res.0;
-                ExpressionKind::Number(res.1)
-            },
-            'a'..='z' | 'A'..='Z' | '_' | '$' => {
-                let res = self.parse_possible_var(current.1)?;
-                exp_end = res.0;
-                res.1
+            '(' => {
+                let exp = self.parse_expression()?.1;
+                self.skip_token(')')?;
+                exp
+            }
+            _ => return Err(FinchError(FinchErrorKind::Unexpected(current.1)))
+        };
+        self.parse_followup(res)
+    }
+
+    fn parse_followup(&mut self, res: ExpressionKind) -> FinchResult<(usize, ExpressionKind)> {
+        let followup = self.data.peek().ok_or(FinchError::none())?;
+        match followup.1 {
+            '=' => {
+                self.data.next();
+                self.skip_token('=')?;
+                let right = self.parse_expression()?;
+                Ok((right.0, ExpressionKind::Binary(Box::new(BinaryOps::Compare(res, right.1)))))
             },
             ' ' => {
                 self.skip_while(' ');
-                let res = self.parse_expression()?;
-                exp_end = res.0;
-                res.1
-            },
-            _ => return Err(FinchError(FinchErrorKind::Unexpected(current.1)))
-        };
-
-        Ok((exp_end, res))
+                self.parse_followup(res)
+            }
+            _ => Ok((followup.0, res))
+        }
     }
 
-    fn parse_possible_var(&mut self, start: char) -> FinchResult<(usize, ExpressionKind)> {
+    fn parse_possible_var(&mut self, start: char) -> FinchResult<ExpressionKind> {
         let mut res = String::from(start);
         let mut vault: Vec<String> = vec![];
         loop {
@@ -143,15 +154,15 @@ impl<'a> Parser<'a> {
                                 return Err(FinchError(FinchErrorKind::MissingPropName));
                             }
                             vault.push(res);
-                            return Ok((ch.0, ExpressionKind::VarDot(vault)));
+                            return Ok(ExpressionKind::VarDot(vault));
                         }
-                        return Ok((ch.0, match res.as_str() {
+                        return Ok(match res.as_str() {
                             "true" => ExpressionKind::Bool(true),
                             "false" => ExpressionKind::Bool(false),
                             "undefined" => ExpressionKind::Undefined,
                             "null" => ExpressionKind::Null,
                             _ => ExpressionKind::Var(res)
-                        }))
+                        })
                     }
                 }
             } else {
@@ -160,13 +171,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_string(&mut self) -> FinchResult<(usize, String)> {
+    fn parse_string(&mut self) -> FinchResult<String> {
         let mut res = String::new();
         loop {
             if let Some(ch) = self.data.next() {
                 match ch.1 {
                     '"' => {
-                        return Ok((ch.0, res));
+                        return Ok(res);
                     },
                     '\\' => res.push(self.data.next().ok_or(FinchError(FinchErrorKind::Expected('"')))?.1),
                     _ => res.push(ch.1)
@@ -177,7 +188,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_number(&mut self, last: char) -> FinchResult<(usize, f32)> {
+    fn parse_number(&mut self, last: char) -> FinchResult<f32> {
         let mut res = String::from(last);
         let mut has_floating_point = false;
         loop {
@@ -196,7 +207,7 @@ impl<'a> Parser<'a> {
                         res.push('.');
                         self.data.next();
                     },
-                    _ => return Ok((ch.0, res.parse::<f32>().map_err(|_| FinchError(FinchErrorKind::InvalidNumber))? ))
+                    _ => return Ok(res.parse::<f32>().map_err(|_| FinchError(FinchErrorKind::InvalidNumber))?)
                 }
             } else {
                 return Err(FinchError::none())
