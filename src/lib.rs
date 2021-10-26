@@ -1,7 +1,7 @@
 use neon::prelude::*;
 mod parser;
 mod error;
-use parser::{Parser, ExpressionKind, TemplateKind, BinaryOps};
+use parser::{Parser, ExpressionKind, TemplateKind, BinaryOps, UnaryOps};
 
 
 fn exp_to_str(exp: &ExpressionKind, pos: &std::ops::Range<usize>) -> String {
@@ -17,6 +17,11 @@ fn exp_to_str(exp: &ExpressionKind, pos: &std::ops::Range<usize>) -> String {
             match &**v {
                 BinaryOps::Compare(left, right) => format!("Binary: {} == {}", exp_to_str(&left, pos), exp_to_str(&right, pos)),
                 _ => format!("UNKNOWNLOL")
+            }
+        }
+        ExpressionKind::Unary(v) => {
+            match &**v {
+                UnaryOps::Not(exp) => format!("Unary NOT: !{}", exp_to_str(exp, pos))
             }
         }
         _ => String::from("Some expression IDK")

@@ -15,6 +15,10 @@ pub enum BinaryOps {
     Lte(ExpressionKind, ExpressionKind)
 }
 
+pub enum UnaryOps {
+    Not(ExpressionKind)
+}
+
 pub enum ExpressionKind {
     Var(String),
     VarDot(Vec<String>),
@@ -24,6 +28,7 @@ pub enum ExpressionKind {
     Undefined,
     Null,
     Binary(Box<BinaryOps>),
+    Unary(Box<UnaryOps>),
     Call {
         var: Box<ExpressionKind>,
         params: Vec<ExpressionKind>
@@ -76,11 +81,15 @@ impl<'a> Parser<'a> {
                 if self.is_next('#') {
                     self.data.next();
                     let temp_kind = self.parse_block()?;
-                    templates.push(Template { pos: first_ind..self.data.peek().ok_or(FinchError::none())?.0, kind: temp_kind });
+                    templates.push(Template { pos: ch.0..self.data.peek().ok_or(FinchError::none())?.0, kind: temp_kind });
+                    current = self.data.next();
                 } else {
-                    let temp_kind = self.parse_expression()?;
+                    let temp_kind = self.parse_full_expression()?;
                     self.skip_token('}')?;
-                    templates.push(Template { pos: ch.0..(temp_kind.0 + 1), kind: TemplateKind::Expression(temp_kind.1) });
+                    self.skip_token('}')?;
+                    // Plus 2 because of the }}
+                    templates.push(Template { pos: ch.0..(temp_kind.0 + 2), kind: TemplateKind::Expression(temp_kind.1) });
+                    current = self.data.next();
                 }
             } else {
                 current = self.data.next();
@@ -96,40 +105,48 @@ impl<'a> Parser<'a> {
         Ok(TemplateKind::Expression(ExpressionKind::String(String::from("TEST_BLOCK"))))
     }
 
-    pub fn parse_expression(&mut self) -> FinchResult<(usize, ExpressionKind)> {
+    pub fn parse_expression(&mut self) -> FinchResult<ExpressionKind> {
         let current = self.data.next().ok_or(FinchError::none())?;
-        let res = match current.1 {
-            '"' => ExpressionKind::String(self.parse_string()?),
-            '1'..='9' => ExpressionKind::Number(self.parse_number(current.1)?),
-            'a'..='z' | 'A'..='Z' | '_' | '$' => self.parse_possible_var(current.1)?,
+        match current.1 {
+            '"' => Ok(ExpressionKind::String(self.parse_string()?)),
+            '0'..='9' => Ok(ExpressionKind::Number(self.parse_number(current.1)?)),
+            'a'..='z' | 'A'..='Z' | '_' | '$' => Ok(self.parse_possible_var(current.1)?),
             ' ' => {
                 self.skip_while(' ');
-                self.parse_expression()?.1
+                self.parse_expression()
             },
             '(' => {
-                let exp = self.parse_expression()?.1;
+                let exp = self.parse_full_expression()?;
                 self.skip_token(')')?;
-                exp
+                Ok(exp.1)
+            },
+            '!' => {
+                let exp = self.parse_expression()?;
+                Ok(ExpressionKind::Unary(Box::new(UnaryOps::Not(exp))))
             }
             _ => return Err(FinchError(FinchErrorKind::Unexpected(current.1)))
-        };
-        self.parse_followup(res)
+        }
+    }
+
+    pub fn parse_full_expression(&mut self) -> FinchResult<(usize, ExpressionKind)> {
+        let exp = self.parse_expression()?;
+        self.parse_followup(exp)
     }
 
     fn parse_followup(&mut self, res: ExpressionKind) -> FinchResult<(usize, ExpressionKind)> {
         let followup = self.data.peek().ok_or(FinchError::none())?;
+        let followup_end = followup.0;
         match followup.1 {
             '=' => {
                 self.data.next();
                 self.skip_token('=')?;
-                let right = self.parse_expression()?;
-                Ok((right.0, ExpressionKind::Binary(Box::new(BinaryOps::Compare(res, right.1)))))
+                Ok((followup_end, ExpressionKind::Binary(Box::new(BinaryOps::Compare(res, self.parse_expression()?)))))
             },
             ' ' => {
                 self.skip_while(' ');
                 self.parse_followup(res)
             }
-            _ => Ok((followup.0, res))
+            _ => Ok((followup_end, res))
         }
     }
 
