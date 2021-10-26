@@ -26,8 +26,8 @@ fn exp_to_str(exp: &ExpressionKind) -> String {
             match &**v {
                 UnaryOps::Not(exp) => format!("!{}", exp_to_str(exp))
             }
-        }
-        _ => String::from("Some expression IDK")
+        },
+        ExpressionKind::Call{var, params} => format!("{}({})", exp_to_str(var), params.iter().map(|v| exp_to_str(v)).collect::<Vec<String>>().join(", "))
     }
 }
 

@@ -176,6 +176,33 @@ impl<'a> Parser<'a> {
                     let right = self.parse_expression()?;
                     self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Or(res, right))), OR_PREC)
                 }
+            },
+            '(' => { // function_call();
+                self.data.next();
+                let mut params: Vec<ExpressionKind> = vec![];
+                loop {
+                    if let Some(ch) = self.data.peek() {
+                        match ch.1 {
+                            ' ' | ',' => {
+                                self.data.next();
+                                continue;
+                            },
+                            ')' => {
+                                self.data.next();
+                                return self.parse_possibly_binary(ExpressionKind::Call {
+                                    var: Box::from(res),
+                                    params
+                                }, 1);
+                            }
+                            _ => {
+                                let exp = self.parse_full_expression()?;
+                                params.push(exp.1);
+                            }
+                        }
+                    } else {
+                        return Err(FinchError::none());
+                    }
+                }
             }
             ' ' => {
                 self.skip_while(' ');
