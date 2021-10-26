@@ -75,7 +75,7 @@ impl<'a> Parser<'a> {
                 } else {
                     let temp_kind = self.parse_expression()?;
                     self.skip_token('}')?;
-                    templates.push(Template { pos: ch.0..(temp_kind.0 + 1), kind: temp_kind.1 });
+                    templates.push(Template { pos: ch.0..(temp_kind.0 + 1), kind: TemplateKind::Expression(temp_kind.1) });
                 }
             } else {
                 current = self.data.next();
@@ -91,9 +91,9 @@ impl<'a> Parser<'a> {
         Ok(TemplateKind::Expression(ExpressionKind::String(String::from("TEST_BLOCK"))))
     }
 
-    pub fn parse_expression(&mut self) -> FinchResult<(usize, TemplateKind)> {
+    pub fn parse_expression(&mut self) -> FinchResult<(usize, ExpressionKind)> {
         let current = self.data.next().ok_or(FinchError::none())?;
-        let mut exp_end: usize = 0;
+        let mut exp_end: usize = 0; 
         let res = match current.1 {
             '"' => {
                 let res = self.parse_string()?;
@@ -109,11 +109,17 @@ impl<'a> Parser<'a> {
                 let res = self.parse_possible_var(current.1)?;
                 exp_end = res.0;
                 res.1
-            }
+            },
+            ' ' => {
+                self.skip_while(' ');
+                let res = self.parse_expression()?;
+                exp_end = res.0;
+                res.1
+            },
             _ => return Err(FinchError(FinchErrorKind::Unexpected(current.1)))
         };
 
-        Ok((exp_end, TemplateKind::Expression(res)))
+        Ok((exp_end, res))
     }
 
     fn parse_possible_var(&mut self, start: char) -> FinchResult<(usize, ExpressionKind)> {
@@ -214,6 +220,24 @@ impl<'a> Parser<'a> {
         } else {
             Err(FinchError(FinchErrorKind::Expected(ch)))
         }
+    }
+
+    fn skip_while(&mut self, ch: char) -> usize {
+        let mut character = self.data.peek();
+        let mut count: usize = 0;
+        loop {
+            if let Some(unwrapped) = character {
+                if unwrapped.1 == ch {
+                    self.data.next();
+                    character = self.data.peek();
+                    count += 1;
+                }
+                else {
+                    break;
+                }
+            }
+        }
+        count
     }
 
 }
