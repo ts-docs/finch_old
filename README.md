@@ -73,18 +73,18 @@ Where `arg1` - `argN` are expressions.
 ```handlebars
 {{#if name == "Google"}} 
   <p>You're Google!</p>
-{{/if #else}}
+{{/#else}}
    <p>You're not Google!</p>
-{{/else}}
+{{/}}
 ```
 
 **if - elseif**
 ```handlebars
 {{#if name == "Google"}}
     <p>You're Google!</p>
-{{/if #elseif name == "Admin"}} 
+{{/#elseif name == "Admin"}} 
     <p>You're an admin!</p>
-{{/elseif #else}} 
+{{/#else}} 
     <p>You're {{name}}!</p>
 {{/else}}
 ```
@@ -93,7 +93,7 @@ Where `arg1` - `argN` are expressions.
 ```handlebars
 {{#each names "name"}}
     {{name}}
-{{/each}}
+{{/}}
 ```
 
 **js**
@@ -103,5 +103,5 @@ Allows you to run javascript code. Return a string with text from the code and i
 ```handlebars
 {{#js}}
     return self.name;
-{{/js}}
+{{/}}
 ```
