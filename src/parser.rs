@@ -67,7 +67,7 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
 
-    pub fn parse(str: &'a String) -> FinchResult<(Vec<char>, SubText)> {
+    pub fn parse(str: &'a str) -> FinchResult<(Vec<char>, SubText)> {
         let mut p = Self {
             data: str.char_indices().peekable()
         };
@@ -77,7 +77,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_text(&mut self) -> FinchResult<SubText> {
         let mut current = self.data.next();
-        let first_ind = current.ok_or(FinchError::none())?.0;
+        let first_ind = current.ok_or_else(FinchError::none)?.0;
         let mut last_ind: usize = 0;
         let mut templates: Vec<Template> = vec![];
         while let Some(ch) = current {
@@ -87,19 +87,16 @@ impl<'a> Parser<'a> {
                 if self.is_next('#') {
                     self.data.next();
                     let temp_kind = self.parse_block()?;
-                    templates.push(Template { pos: ch.0..self.data.peek().ok_or(FinchError::none())?.0, kind: temp_kind });
-                    current = self.data.next();
+                    templates.push(Template { pos: ch.0..self.data.peek().ok_or_else(FinchError::none)?.0, kind: temp_kind });
                 } else {
                     let temp_kind = self.parse_full_expression()?;
                     self.skip_token('}')?;
                     self.skip_token('}')?;
                     // Plus 2 because of the }}
                     templates.push(Template { pos: ch.0..(temp_kind.0 + 2), kind: TemplateKind::Expression(temp_kind.1) });
-                    current = self.data.next();
                 }
-            } else {
-                current = self.data.next();
             }
+            current = self.data.next();
         }
         Ok(SubText {
             pos: first_ind..last_ind,
@@ -112,7 +109,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expression(&mut self) -> FinchResult<ExpressionKind> {
-        let current = self.data.next().ok_or(FinchError::none())?;
+        let current = self.data.next().ok_or_else(FinchError::none)?;
         match current.1 {
             '"' => Ok(ExpressionKind::String(self.parse_string()?)),
             '0'..='9' | '-' => Ok(ExpressionKind::Number(self.parse_number(current.1)?)),
@@ -130,7 +127,7 @@ impl<'a> Parser<'a> {
                 let exp = self.parse_expression()?;
                 Ok(ExpressionKind::Unary(Box::new(UnaryOps::Not(exp))))
             }
-            _ => return Err(FinchError(FinchErrorKind::Unexpected(current.1)))
+            _ => Err(FinchError(FinchErrorKind::Unexpected(current.1)))
         }
     }
 
@@ -140,7 +137,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_possibly_binary(&mut self, res: ExpressionKind, prec: i8) -> FinchResult<(usize, ExpressionKind)> {
-        let followup = self.data.peek().ok_or(FinchError::none())?;
+        let followup = self.data.peek().ok_or_else(FinchError::none)?;
         let followup_end = followup.0;
         match followup.1 {
             '=' => { // ==
@@ -155,7 +152,7 @@ impl<'a> Parser<'a> {
                 let right = self.parse_expression()?;
                 self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Not(res, right))), COMPARE_PREC)
             }
-            '&' => {
+            '&' => { // &&
                 self.data.next();
                 self.skip_token('&')?;
                 if AND_PREC > prec {
@@ -166,7 +163,7 @@ impl<'a> Parser<'a> {
                     self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::And(res, right))), AND_PREC)
                 }
             }
-            '|' => {
+            '|' => { // ||
                 self.data.next();
                 self.skip_token('|')?;
                 if OR_PREC > prec {
@@ -180,29 +177,26 @@ impl<'a> Parser<'a> {
             '(' => { // function_call();
                 self.data.next();
                 let mut params: Vec<ExpressionKind> = vec![];
-                loop {
-                    if let Some(ch) = self.data.peek() {
-                        match ch.1 {
-                            ' ' | ',' => {
-                                self.data.next();
-                                continue;
-                            },
-                            ')' => {
-                                self.data.next();
-                                return self.parse_possibly_binary(ExpressionKind::Call {
-                                    var: Box::from(res),
-                                    params
-                                }, 1);
-                            }
-                            _ => {
-                                let exp = self.parse_full_expression()?;
-                                params.push(exp.1);
-                            }
+                while let Some(ch) = self.data.peek() {
+                    match ch.1 {
+                        ' ' | ',' => {
+                            self.data.next();
+                            continue;
+                        },
+                        ')' => {
+                            self.data.next();
+                            return self.parse_possibly_binary(ExpressionKind::Call {
+                                var: Box::from(res),
+                                params
+                            }, 1);
                         }
-                    } else {
-                        return Err(FinchError::none());
+                        _ => {
+                            let exp = self.parse_full_expression()?;
+                            params.push(exp.1);
+                        }
                     }
                 }
+                Err(FinchError::none())
             }
             ' ' => {
                 self.skip_while(' ');
@@ -215,95 +209,88 @@ impl<'a> Parser<'a> {
     fn parse_possible_var(&mut self, start: char) -> FinchResult<ExpressionKind> {
         let mut res = String::from(start);
         let mut vault: Vec<String> = vec![];
-        loop {
-            if let Some(ch) = self.data.peek() {
-                match ch.1 {
-                    'a'..='z' | 'A'..='Z' | '_' | '$' | '0'..='9' => {
-                        res.push(ch.1);
-                        self.data.next();
-                    }
-                    '.' => {
-                        vault.push(res);
-                        res = String::new();
-                        self.data.next();
-                    }
-                    _ => {
-                        if vault.len() != 0 {
-                            if res.len() == 0 {
-                                return Err(FinchError(FinchErrorKind::MissingPropName));
-                            }
-                            vault.push(res);
-                            return Ok(ExpressionKind::VarDot(vault));
-                        }
-                        return Ok(match res.as_str() {
-                            "true" => ExpressionKind::Bool(true),
-                            "false" => ExpressionKind::Bool(false),
-                            "undefined" => ExpressionKind::Undefined,
-                            "null" => ExpressionKind::Null,
-                            _ => ExpressionKind::Var(res)
-                        })
-                    }
+        while let Some(ch) = self.data.peek() {
+            match ch.1 {
+                'a'..='z' | 'A'..='Z' | '_' | '$' | '0'..='9' => {
+                    res.push(ch.1);
+                    self.data.next();
                 }
-            } else {
-                return Err(FinchError::none());
+                '.' => {
+                    vault.push(res);
+                    res = String::new();
+                    self.data.next();
+                }
+                _ => {
+                    if vault.is_empty() {
+                        if res.is_empty() {
+                            return Err(FinchError(FinchErrorKind::MissingPropName));
+                        }
+                        vault.push(res);
+                        return Ok(ExpressionKind::VarDot(vault));
+                    }
+                    return Ok(match res.as_str() {
+                        "true" => ExpressionKind::Bool(true),
+                        "false" => ExpressionKind::Bool(false),
+                        "undefined" => ExpressionKind::Undefined,
+                        "null" => ExpressionKind::Null,
+                        _ => ExpressionKind::Var(res)
+                    })
+                }
             }
         }
+        Err(FinchError::none())
     }
 
     fn parse_string(&mut self) -> FinchResult<String> {
         let mut res = String::new();
-        loop {
-            if let Some(ch) = self.data.next() {
-                match ch.1 {
-                    '"' => {
-                        return Ok(res);
-                    },
-                    '\\' => res.push(self.data.next().ok_or(FinchError(FinchErrorKind::Expected('"')))?.1),
-                    _ => res.push(ch.1)
-                }
-            } else {
-                return Err(FinchError(FinchErrorKind::Expected('"')));
+        while let Some(ch) = self.data.next() {
+            match ch.1 {
+                '"' => {
+                    return Ok(res);
+                },
+                '\\' => res.push(self.data.next().ok_or(FinchError(FinchErrorKind::Expected('"')))?.1),
+                _ => res.push(ch.1)
             }
         }
+        Err(FinchError(FinchErrorKind::Expected('"')))
     }
 
     fn parse_number(&mut self, last: char) -> FinchResult<f32> {
         let mut res = String::from(last);
         let mut has_floating_point = false;
-        loop {
-            if let Some(ch) = self.data.peek() {
-                match ch.1 {
-                    '0'..='9' => {
-                        res.push(ch.1);
-                        self.data.next();
-                    },
-                    '_' => {
-                        self.data.next();
-                        continue;
-                    },
-                    '.' if !has_floating_point => {
-                        has_floating_point = true;
-                        res.push('.');
-                        self.data.next();
-                    },
-                    _ => return Ok(res.parse::<f32>().map_err(|_| FinchError(FinchErrorKind::InvalidNumber))?)
-                }
-            } else {
-                return Err(FinchError::none())
+        while let Some(ch) = self.data.peek() {
+            match ch.1 {
+                '0'..='9' => {
+                    res.push(ch.1);
+                    self.data.next();
+                },
+                '_' => {
+                    self.data.next();
+                    continue;
+                },
+                '.' if !has_floating_point => {
+                    has_floating_point = true;
+                    res.push('.');
+                    self.data.next();
+                },
+                _ => return res.parse::<f32>().map_err(|_| FinchError(FinchErrorKind::InvalidNumber))
             }
         }
+        Err(FinchError::none())
     }
 
     fn is_next(&mut self, ch: char) -> bool {
-        let thing = self.data.peek();
-        if thing.is_none() { false }
-        else { thing.unwrap().1 == ch }
+        if let Some(thing) = self.data.peek() {
+            thing.1 == ch
+        } else {
+            false
+        }
     }
 
     fn skip_token(&mut self, ch: char) -> FinchResult<()> {
         if let Some(next) = self.data.next() {
             if next.1 != ch {
-                return Err(FinchError(FinchErrorKind::ExpectedFound(ch, next.1)))
+                Err(FinchError(FinchErrorKind::ExpectedFound(ch, next.1)))
             } else {
                 Ok(())
             }
@@ -313,16 +300,11 @@ impl<'a> Parser<'a> {
     }
 
     fn skip_while(&mut self, ch: char) {
-        let mut character = self.data.peek();
-        loop {
-            if let Some(unwrapped) = character {
-                if unwrapped.1 == ch {
-                    self.data.next();
-                    character = self.data.peek();
-                }
-                else {
-                    break;
-                }
+        while let Some(character) = self.data.peek() {
+            if character.1 == ch {
+                self.data.next();
+            } else {
+                break;
             }
         }
     }
