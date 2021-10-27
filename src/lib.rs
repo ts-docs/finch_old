@@ -15,11 +15,14 @@ fn exp_to_str(exp: &ExpressionKind) -> String {
         ExpressionKind::VarDot(v) => format!("{}", v.join(".")),
         ExpressionKind::Binary(v) => {
             match &**v {
-                BinaryOps::Compare(left, right) => format!("({} == {})", exp_to_str(&left), exp_to_str(&right)),
-                BinaryOps::Not(left, right) => format!("({} != {})", exp_to_str(&left), exp_to_str(&right)),
-                BinaryOps::And(left, right) => format!("({} && {})", exp_to_str(&left), exp_to_str(&right)),
-                BinaryOps::Or(left, right) => format!("({} || {})", exp_to_str(&left), exp_to_str(&right)),
-                _ => format!("UNKNOWNLOL")
+                BinaryOps::Compare(left, right) => format!("({} == {})", exp_to_str(left), exp_to_str(right)),
+                BinaryOps::Not(left, right) => format!("({} != {})", exp_to_str(left), exp_to_str(right)),
+                BinaryOps::And(left, right) => format!("({} && {})", exp_to_str(left), exp_to_str(right)),
+                BinaryOps::Or(left, right) => format!("({} || {})", exp_to_str(left), exp_to_str(right)),
+                BinaryOps::Gt(left, right) => format!("({} > {})", exp_to_str(left), exp_to_str(right)),
+                BinaryOps::Gte(left, right) => format!("({} >= {})", exp_to_str(left), exp_to_str(right)),
+                BinaryOps::Lt(left, right) => format!("({} < {})", exp_to_str(left), exp_to_str(right)),
+                BinaryOps::Lte(left, right) => format!("({} <= {})", exp_to_str(left), exp_to_str(right))
             }
         }
         ExpressionKind::Unary(v) => {

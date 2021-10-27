@@ -41,14 +41,16 @@ pub enum ExpressionKind {
     }
 }
 
+pub struct FnBlock {
+    pub name: String,
+    pub params: Vec<ExpressionKind>,
+    pub block: Option<SubText>,
+    pub chain: Option<Box<FnBlock>>
+}
 
 pub enum TemplateKind {
     Expression(ExpressionKind),
-    Block {
-        name: String,
-        params: Vec<ExpressionKind>,
-        block: SubText
-    }
+    Block(FnBlock)
 }
 
 pub struct Template {
@@ -172,6 +174,28 @@ impl<'a> Parser<'a> {
                 } else {
                     let right = self.parse_expression()?;
                     self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Or(res, right))), OR_PREC)
+                }
+            },
+            '>' => { // >, >=
+                self.data.next();
+                if self.is_next('=') {
+                    self.data.next();
+                    let right = self.parse_expression()?;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Gte(res, right))), COMPARE_PREC)
+                } else {
+                    let right = self.parse_expression()?;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Gt(res, right))), COMPARE_PREC)
+                }
+            },
+            '<' => { // >, >=
+                self.data.next();
+                if self.is_next('=') {
+                    self.data.next();
+                    let right = self.parse_expression()?;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Lte(res, right))), COMPARE_PREC)
+                } else {
+                    let right = self.parse_expression()?;
+                    self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Lt(res, right))), COMPARE_PREC)
                 }
             },
             '(' => { // function_call();
