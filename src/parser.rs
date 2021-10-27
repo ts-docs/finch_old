@@ -22,7 +22,8 @@ pub enum BinaryOps {
 }
 
 pub enum UnaryOps {
-    Not(ExpressionKind)
+    Not(ExpressionKind),
+    ShortCircuit(ExpressionKind)
 }
 
 pub enum ExpressionKind {
@@ -190,26 +191,54 @@ impl<'a> Parser<'a> {
 
     pub fn parse_expression(&mut self) -> FinchResult<ExpressionKind> {
         let current = self.data.peek().ok_or(FinchError::None)?;
-        match current.1 {
-            '"' => Ok(ExpressionKind::String(self.parse_string()?)),
-            '0'..='9' | '-' => Ok(ExpressionKind::Number(self.parse_number()?)),
-            'a'..='z' | 'A'..='Z' | '_' | '$' => Ok(self.parse_possible_var()?),
+        let thing = match current.1 {
+            '"' => ExpressionKind::String(self.parse_string()?),
+            '0'..='9' | '-' => ExpressionKind::Number(self.parse_number()?),
+            'a'..='z' | 'A'..='Z' | '_' | '$' => self.parse_possible_var()?,
             ' ' => {
                 self.skip_while(' ');
-                self.parse_expression()
+                self.parse_expression()?
             },
             '(' => {
                 self.data.next();
                 let exp = self.parse_full_expression()?;
                 self.skip_token(')')?;
-                Ok(exp.1)
+                exp.1
             },
             '!' => {
                 self.data.next();
-                let exp = self.parse_expression()?;
-                Ok(ExpressionKind::Unary(Box::new(UnaryOps::Not(exp))))
-            }
-            _ => Err(FinchError::Unexpected(current.1))
+                ExpressionKind::Unary(Box::new(UnaryOps::Not(self.parse_expression()?)))
+            },
+            _ => return Err(FinchError::Unexpected(current.1))
+        };
+        let next = self.data.peek().ok_or(FinchError::None)?;
+        match next.1 {
+            '?' => {
+                self.data.next();
+                Ok(ExpressionKind::Unary(Box::new(UnaryOps::ShortCircuit(thing))))
+            },
+            '(' => { // function_call();
+                self.data.next();
+                let mut params: Vec<ExpressionKind> = vec![];
+                while let Some(ch) = self.data.peek() {
+                    match ch.1 {
+                        ' ' | ',' => {
+                            self.data.next();
+                            continue;
+                        },
+                        ')' => {
+                            self.data.next();
+                            return Ok(ExpressionKind::Call {
+                                var: Box::from(thing),
+                                params
+                            });
+                        }
+                        _ => params.push(self.parse_full_expression()?.1)
+                    }
+                }
+                Err(FinchError::None)
+            },
+            _ => Ok(thing)
         }
     }
 
@@ -278,27 +307,6 @@ impl<'a> Parser<'a> {
                     self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Lt(res, right))), COMPARE_PREC)
                 }
             },
-            '(' => { // function_call();
-                self.data.next();
-                let mut params: Vec<ExpressionKind> = vec![];
-                while let Some(ch) = self.data.peek() {
-                    match ch.1 {
-                        ' ' | ',' => {
-                            self.data.next();
-                            continue;
-                        },
-                        ')' => {
-                            self.data.next();
-                            return self.parse_possibly_binary(ExpressionKind::Call {
-                                var: Box::from(res),
-                                params
-                            }, 1);
-                        }
-                        _ => params.push(self.parse_full_expression()?.1)
-                    }
-                }
-                Err(FinchError::None)
-            }
             ' ' => {
                 self.skip_while(' ');
                 self.parse_possibly_binary(res, prec)
@@ -322,7 +330,7 @@ impl<'a> Parser<'a> {
                     self.data.next();
                 }
                 _ => {
-                    if vault.is_empty() {
+                    if !vault.is_empty() {
                         if res.is_empty() {
                             return Err(FinchError::MissingPropName);
                         }
