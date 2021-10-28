@@ -22,8 +22,7 @@ pub enum BinaryOps {
 }
 
 pub enum UnaryOps {
-    Not(ExpressionKind),
-    ShortCircuit(ExpressionKind)
+    Not(ExpressionKind)
 }
 
 pub enum ExpressionKind {
@@ -213,10 +212,6 @@ impl<'a> Parser<'a> {
         };
         let next = self.data.peek().ok_or(FinchError::None)?;
         match next.1 {
-            '?' => {
-                self.data.next();
-                Ok(ExpressionKind::Unary(Box::new(UnaryOps::ShortCircuit(thing))))
-            },
             '(' => { // function_call();
                 self.data.next();
                 let mut params: Vec<ExpressionKind> = vec![];

@@ -3,15 +3,15 @@ use neon::types::{JsString, JsArray, JsBoolean, JsUndefined, JsNull, JsNumber, J
 use neon::handle::Handle;
 use neon::context::{Context, FunctionContext};
 use neon::object::{Object};
+use std::rc::Rc;
 
 #[derive(Clone, std::cmp::PartialEq)]
 pub enum RawValue {
     String(String),
     Number(f64),
     Boolean(bool),
-    Vec(Vec<RawValue>),
+    Vec(Rc<Vec<RawValue>>),
     Undefined,
-    ShortCircuit,
     Null
 }
 
@@ -33,7 +33,7 @@ impl<'a> IntoRawValue for Handle<'a, JsValue> {
             RawValue::Undefined
         } else if let Ok(arr_handle) = self.downcast::<JsArray, _>(cx) {
             if let Ok(vec) = arr_handle.to_vec(cx) {
-                RawValue::Vec(vec.into_iter().map(|i| i.raw(cx)).collect())
+                RawValue::Vec(Rc::new(vec.into_iter().map(|i| i.raw(cx)).collect()))
             } else {
                 RawValue::Undefined
             }
@@ -53,13 +53,12 @@ impl RawValue {
             RawValue::Null => cx.null().upcast::<JsValue>(),
             RawValue::Vec(v) => {
                 let arr = JsArray::new(cx, v.len() as u32);
-                for (ind, val) in v.into_iter().enumerate() {
-                    let js_val = val.js(cx);
+                for (ind, val) in v.iter().enumerate() {
+                    let js_val = val.clone().js(cx);
                     arr.set(cx, ind as u32, js_val).unwrap();
                 };
                 arr.upcast::<JsValue>()
              }
-             RawValue::ShortCircuit => cx.undefined().upcast::<JsValue>()
         }
     }
 
@@ -69,7 +68,7 @@ impl RawValue {
             Self::Number(num) => *num == 0.0,
             Self::Boolean(bol) => *bol == false,
             Self::Null | Self::Undefined => true,
-            Self::Vec(_) | Self::ShortCircuit => false,
+            Self::Vec(_) => false,
         }
     }
 
@@ -80,8 +79,7 @@ impl RawValue {
             Self::Boolean(bol) => bol.to_string(),
             Self::Undefined => String::from("undefined"),
             Self::Null => String::from("null"),
-            Self::ShortCircuit => String::from(""),
-            Self::Vec(v) => v.into_iter().map(|val| val.to_string()).collect::<Vec<String>>().join(", ")
+            Self::Vec(v) => v.iter().map(|val| val.to_string()).collect::<Vec<String>>().join(", ")
         }
     }
 
@@ -96,7 +94,6 @@ impl std::string::ToString for RawValue {
             Self::Boolean(bol) => bol.to_string(),
             Self::Undefined => String::from("undefined"),
             Self::Null => String::from("null"),
-            Self::ShortCircuit => String::from(""),
             Self::Vec(v) => v.iter().map(|val| val.to_string()).collect::<Vec<String>>().join(", ")
         }
     }

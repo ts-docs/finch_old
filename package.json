@@ -6,7 +6,7 @@
   "scripts": {
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics --release",
     "build-debug": "npm run build --",
-    "build-release": "npm run build",
+    "build-release": "npm run build --",
     "install": "npm run build-release",
     "test": "cargo test"
   },
@@ -28,5 +28,6 @@
   "bugs": {
     "url": "https://github.com/ts-docs/finch/issues"
   },
-  "homepage": "https://github.com/ts-docs/finch#readme"
+  "homepage": "https://github.com/ts-docs/finch#readme",
+  "dependencies": {}
 }

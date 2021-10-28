@@ -10,6 +10,7 @@ pub enum FinchError {
     PropNotExist(String),
     TemplateNotExist(String),
     InvalidArg(i32),
+    ExpectedObject,
     None
 }
 
@@ -24,7 +25,8 @@ impl std::fmt::Display for FinchError {
             Self::MissingPropName => write!(f, "Expected property name after dot (.)"),
             Self::PropNotExist(prop) => write!(f, "Property '{}' does not exist", prop),
             Self::InvalidArg(n) => write!(f, "Argument {} is invalid", n),
-            Self::TemplateNotExist(temp_name) => write!(f, "The template {} doesn't exist", temp_name)
+            Self::TemplateNotExist(temp_name) => write!(f, "The template {} doesn't exist", temp_name),
+            Self::ExpectedObject => write!(f, "Expected type object for dot notation.")
         }
     }
 }
