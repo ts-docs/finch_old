@@ -8,29 +8,27 @@ use neon::object::Object;
 use neon::context::{FunctionContext};
 use std::collections::HashMap;
 
-pub struct Compiler<'a> {
-    pub config: Handle<'a, JsObject>,
+pub struct Compiler {
     pub templates: HashMap<String, (String, SubText)>,
 }
 
 pub struct CompilerContext<'a, 'b> {
     cx: &'a mut FunctionContext<'b>,
-    compiler: &'a Compiler<'a>,
+    compiler: &'a Compiler,
     locals: HashMap<String, RawValue>,
     data: &'a Handle<'a, JsObject>,
     original: &'a str
 }
 
-impl<'a> Compiler<'a> {
+impl Compiler {
 
-    pub fn new(shared_config: Handle<'a, JsObject>) -> Self {
+    pub fn new() -> Self {
         Self { 
-            config: shared_config, 
             templates: HashMap::new(),
          }
     }
 
-    pub fn add_template(&mut self, name: &'a str, text: &'a str) -> FinchResult<()> {
+    pub fn add_template(&mut self, name: &str, text: &str) -> FinchResult<()> {
         let parsed = Parser::parse(text)?;
         self.templates.insert(name.to_string(), (text.to_string(), parsed));
         Ok(())
@@ -80,9 +78,6 @@ impl Compilable<RawValue> for ExpressionKind {
             ExpressionKind::Null => Ok(RawValue::Null),
             ExpressionKind::Undefined => Ok(RawValue::Undefined),
             ExpressionKind::Var(val) => {
-                if let Ok(thing) = ctx.compiler.config.get(ctx.cx, val.as_str()) {
-                    return Ok(thing.raw(ctx.cx))
-                }
                 if let Some(thing) = ctx.locals.get(val) {
                     return Ok(thing.clone());
                 }
