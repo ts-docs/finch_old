@@ -4,7 +4,7 @@ use neon::handle::Handle;
 use neon::context::{Context, FunctionContext};
 use neon::object::{Object};
 
-#[derive(Clone)]
+#[derive(Clone, std::cmp::PartialEq)]
 pub enum RawValue {
     String(String),
     Number(f64),
@@ -44,7 +44,7 @@ impl<'a> IntoRawValue for Handle<'a, JsValue> {
 }
 
 impl RawValue {
-    fn js<'a>(self, cx: &mut FunctionContext<'a>) -> Handle<'a, JsValue> {
+    pub fn js<'a>(self, cx: &mut FunctionContext<'a>) -> Handle<'a, JsValue> {
         match self {
             RawValue::String(val) => cx.string(val).upcast::<JsValue>(),
             RawValue::Number(num) => cx.number(num).upcast::<JsValue>(),
@@ -55,11 +55,49 @@ impl RawValue {
                 let arr = JsArray::new(cx, v.len() as u32);
                 for (ind, val) in v.into_iter().enumerate() {
                     let js_val = val.js(cx);
-                    arr.set(cx, ind as u32, js_val);
+                    arr.set(cx, ind as u32, js_val).unwrap();
                 };
                 arr.upcast::<JsValue>()
              }
              RawValue::ShortCircuit => cx.undefined().upcast::<JsValue>()
+        }
+    }
+
+    pub fn is_falsey(&self) -> bool {
+        match self {
+            Self::String(str) => str == "",
+            Self::Number(num) => *num == 0.0,
+            Self::Boolean(bol) => *bol == false,
+            Self::Null | Self::Undefined => true,
+            Self::Vec(_) | Self::ShortCircuit => false,
+        }
+    }
+
+    pub fn as_string(self) -> String {
+        match self {
+            Self::String(st) => st,
+            Self::Number(num) => num.to_string(),
+            Self::Boolean(bol) => bol.to_string(),
+            Self::Undefined => String::from("undefined"),
+            Self::Null => String::from("null"),
+            Self::ShortCircuit => String::from(""),
+            Self::Vec(v) => v.into_iter().map(|val| val.to_string()).collect::<Vec<String>>().join(", ")
+        }
+    }
+
+}
+
+impl std::string::ToString for RawValue {
+
+    fn to_string(&self) -> String {
+        match self {
+            Self::String(st) => st.clone(),
+            Self::Number(num) => num.to_string(),
+            Self::Boolean(bol) => bol.to_string(),
+            Self::Undefined => String::from("undefined"),
+            Self::Null => String::from("null"),
+            Self::ShortCircuit => String::from(""),
+            Self::Vec(v) => v.iter().map(|val| val.to_string()).collect::<Vec<String>>().join(", ")
         }
     }
 }

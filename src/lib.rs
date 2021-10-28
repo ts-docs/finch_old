@@ -4,7 +4,7 @@ mod error;
 mod convert;
 mod compiler;
 use parser::{BinaryOps, ExpressionKind, FnBlock, Parser, TemplateKind, UnaryOps};
-
+use compiler::Compiler;
 
 fn exp_to_str(exp: &ExpressionKind) -> String {
     match exp {
@@ -59,8 +59,10 @@ fn hello(mut cx: FunctionContext) -> JsResult<JsString> {
     Ok(cx.string("hello node"))
 }
 
+
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
+    let mut compiler: Option<Compiler>;
     cx.export_function("hello", hello)?;
     Ok(())
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "cargo-cp-artifact -nc index.node -- cargo build --message-format=json-render-diagnostics --release",
     "build-debug": "npm run build --",
-    "build-release": "npm run build -- --release",
+    "build-release": "npm run build",
     "install": "npm run build-release",
     "test": "cargo test"
   },
