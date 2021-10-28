@@ -2,10 +2,11 @@
 use crate::parser::*;
 use crate::error::FinchError;
 use crate::convert::*;
-use neon::types::{JsObject, JsString};
-use neon::handle::Handle;
+use neon::prelude::JsFunction;
+use neon::types::{JsObject, JsString, JsValue};
+use neon::handle::{Handle};
 use neon::object::Object;
-use neon::context::{FunctionContext};
+use neon::context::{FunctionContext, Context};
 use std::collections::HashMap;
 
 pub struct Compiler {
@@ -48,10 +49,10 @@ impl Compiler {
 }
 
 pub trait Compilable<T> {
-    fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<T>;
+    fn compile<'a, 'b>(&self, ctx: &mut CompilerContext<'a, 'b>) -> FinchResult<T>;
 }
 
-impl Compilable<String> for SubText {
+impl<'a> Compilable<String> for SubText {
 
     fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<String> {
         let mut res = String::new();
@@ -70,6 +71,32 @@ impl Compilable<String> for SubText {
         res += &ctx.original[last_temp_end..ctx.original.len()];
         Ok(res)
     }
+
+}
+
+impl ExpressionKind {
+
+    fn compile_to_js<'a, 'b>(&self, ctx: &mut CompilerContext<'a, 'b>) -> FinchResult<Handle<'b, JsValue>> {
+        match self {
+            ExpressionKind::String(val) => Ok(ctx.cx.string(val.as_str()).upcast::<JsValue>()),
+            ExpressionKind::Number(num) => Ok(ctx.cx.number(*num).upcast::<JsValue>()),
+            ExpressionKind::Bool(bol) => Ok(ctx.cx.boolean(*bol).upcast::<JsValue>()),
+            ExpressionKind::Undefined => Ok(ctx.cx.undefined().upcast::<JsValue>()),
+            ExpressionKind::Null => Ok(ctx.cx.null().upcast::<JsValue>()),
+            ExpressionKind::Var(val) => Ok(ctx.data.get(ctx.cx, val.as_str()).map_err(|_| FinchError::PropNotExist(val.to_string()))?),
+            ExpressionKind::VarDot(path) => {
+                let first = &path[0];
+                let mut dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
+                for ind in 1..path.len() {
+                    dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, path[ind].as_str()).map_err(|_| FinchError::ExpectedObject)?;
+                };
+                Ok(dat)
+            },
+            ExpressionKind::Unary(_) | ExpressionKind::Binary(_) => Ok(self.compile(ctx)?.js(ctx.cx)),
+            ExpressionKind::Call{var: _, params: _} => Ok(self.compile(ctx)?.js(ctx.cx))
+        }
+    }
+
 }
 
 impl Compilable<RawValue> for ExpressionKind {
@@ -121,8 +148,26 @@ impl Compilable<RawValue> for ExpressionKind {
                     }
                     _ => Ok(RawValue::Undefined)
                 }
+            },
+            ExpressionKind::Call{var, params} => {
+                let mut mapped_params: Vec<Handle<JsValue>> = vec![];
+                for param in params {
+                    mapped_params.push(param.compile_to_js(ctx)?)
+                }
+                match &**var {
+                    ExpressionKind::Var(name) => {
+                        let func = ctx.data.get(ctx.cx, name.as_str()).map_err(|_| FinchError::PropNotExist(name.to_string()))?;
+                        if let Ok(val) = func.downcast::<JsFunction, _>(ctx.cx) {
+                            let undefiend = ctx.cx.undefined();
+                            let return_val = val.call(ctx.cx, undefiend, mapped_params).map_err(|_| FinchError::ErrInFunction(name.to_string()))?;
+                            Ok(return_val.raw(ctx.cx))
+                        } else {
+                            Err(FinchError::NotCallable(name.to_string()))
+                        }
+                    }
+                    _ => Err(FinchError::None)
+                }
             }
-            _ => Ok(RawValue::Undefined)
         }
     }
 }
