@@ -1,6 +1,8 @@
 use neon::prelude::*;
 mod parser;
 mod error;
+mod convert;
+mod compiler;
 use parser::{BinaryOps, ExpressionKind, FnBlock, Parser, TemplateKind, UnaryOps};
 
 

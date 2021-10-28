@@ -4,7 +4,7 @@ use std::ops::Range;
 use crate::error::*;
 
 type Data<'a> = Peekable<std::str::CharIndices<'a>>;
-type FinchResult<R> = Result<R, FinchError>;
+pub type FinchResult<R> = Result<R, FinchError>;
 
 static COMPARE_PREC: i8 = 5;
 static AND_PREC: i8 = 10;
@@ -29,7 +29,7 @@ pub enum UnaryOps {
 pub enum ExpressionKind {
     Var(String),
     VarDot(Vec<String>),
-    Number(f32),
+    Number(f64),
     String(String),
     Bool(bool),
     Undefined,
@@ -382,7 +382,7 @@ impl<'a> Parser<'a> {
         Err(FinchError::Expected('"'))
     }
 
-    fn parse_number(&mut self) -> FinchResult<f32> {
+    fn parse_number(&mut self) -> FinchResult<f64> {
         let mut res = String::new();
         let mut has_floating_point = false;
         while let Some(ch) = self.data.peek() {
@@ -400,7 +400,7 @@ impl<'a> Parser<'a> {
                     res.push('.');
                     self.data.next();
                 },
-                _ => return res.parse::<f32>().map_err(|_| FinchError::InvalidNumber)
+                _ => return res.parse::<f64>().map_err(|_| FinchError::InvalidNumber)
             }
         }
         Err(FinchError::None)
