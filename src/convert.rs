@@ -64,15 +64,15 @@ impl RawValue {
 
     pub fn is_falsey(&self) -> bool {
         match self {
-            Self::String(str) => str == "",
+            Self::String(str) => str.is_empty(),
             Self::Number(num) => *num == 0.0,
-            Self::Boolean(bol) => *bol == false,
+            Self::Boolean(bol) => !(*bol),
             Self::Null | Self::Undefined => true,
             Self::Vec(_) => false,
         }
     }
 
-    pub fn as_string(self) -> String {
+    pub fn convert_to_string(self) -> String {
         match self {
             Self::String(st) => st,
             Self::Number(num) => num.to_string(),

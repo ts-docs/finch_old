@@ -18,13 +18,13 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("addTemplate", |mut cx: FunctionContext| -> JsResult<JsUndefined> {
         let name = cx.argument::<JsString>(0)?.value(&mut cx);
         let value = cx.argument::<JsString>(1)?.value(&mut cx);
-        COMPILER.lock().unwrap().add_template(&name, &value);
+        COMPILER.lock().unwrap().add_template(&name, &value).unwrap();
         Ok(cx.undefined())
     })?;
     cx.export_function("compile", |mut cx: FunctionContext| -> JsResult<JsString> {
         match COMPILER.lock().unwrap().compile(&mut cx) {
             Ok(res) => Ok(cx.string(res)),
-            Err(err) => Ok(cx.string(format!("{}", err)))
+            Err(err) => panic!("{}", err)
         }
     })?;
     Ok(())

@@ -42,7 +42,7 @@ impl Compiler {
             cx,
             locals: HashMap::new(),
             data: &data,
-            original: &og
+            original: og
         })
     }
 
@@ -59,7 +59,7 @@ impl<'a> Compilable<String> for SubText {
         let mut last_temp_end = 0;
         for temp in &self.templates {
             let temp_str = match &temp.kind {
-                TemplateKind::Expression(exp) => exp.compile(ctx)?.as_string(),
+                TemplateKind::Expression(exp) => exp.compile(ctx)?.convert_to_string(),
                 TemplateKind::Block(_) => String::new()
             };
             if last_temp_end < temp.pos.start {
@@ -87,8 +87,8 @@ impl ExpressionKind {
             ExpressionKind::VarDot(path) => {
                 let first = &path[0];
                 let mut dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
-                for ind in 1..path.len() {
-                    dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, path[ind].as_str()).map_err(|_| FinchError::ExpectedObject)?;
+                for item in path.iter().skip(1) {
+                    dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, item.as_str()).map_err(|_| FinchError::ExpectedObject)?;
                 };
                 Ok(dat)
             },
@@ -123,8 +123,8 @@ impl Compilable<RawValue> for ExpressionKind {
                 }
                 let first = &path[0];
                 let mut dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
-                for ind in 1..path.len() {
-                    dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, path[ind].as_str()).map_err(|_| FinchError::ExpectedObject)?;
+                for item in path.iter().skip(1) {
+                    dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, item.as_str()).map_err(|_| FinchError::ExpectedObject)?;
                 };
                 let raw_thing = dat.raw(ctx.cx);
                 ctx.locals.insert(joined, raw_thing.clone());
