@@ -1,7 +1,7 @@
 
 use std::collections::HashMap;
-use neon::prelude::JsObject;
-use crate::{compiler::{FnBlockHelper}, convert::RawValue, error::FinchError};
+use neon::prelude::{JsObject, Context, Object, JsFunction};
+use crate::{compiler::{FnBlockHelper}, convert::{RawValue, IntoRawValue}, error::FinchError};
 
 pub fn init() -> HashMap<String, FnBlockHelper> {
     let mut res = HashMap::new();
@@ -29,6 +29,17 @@ pub fn init() -> HashMap<String, FnBlockHelper> {
         } else {
             Err(FinchError::InvalidArg(0))
         }
+    }));
+
+    res.insert(String::from("js"), FnBlockHelper::Native(|block, ctx| {
+        let body = &ctx.original[block.block.as_ref().unwrap().pos.clone()];
+        let val = ctx.cx.string(body);
+        let param_name = ctx.cx.string("data");
+        let func = ctx.cx.global().get(ctx.cx, "Function").map_err(|_| FinchError::None)?.downcast::<JsFunction, _>(ctx.cx).map_err(|_| FinchError::None)?;
+        let res = func.construct(ctx.cx, vec![param_name, val]).map_err(|_| FinchError::None)?.downcast::<JsFunction, _>(ctx.cx).map_err(|_| FinchError::None)?;
+        let undefined = ctx.cx.undefined();
+        let result = res.call(ctx.cx, undefined, vec![ctx.data]).map_err(|er| FinchError::External(er.to_string()))?;
+        Ok(result.raw(ctx.cx).to_string())
     }));
 
     res
