@@ -1,5 +1,4 @@
 
-
 #[derive(Debug)]
 pub enum FinchError {
     ExpectedFound(char, char),
@@ -13,6 +12,7 @@ pub enum FinchError {
     ExpectedObject,
     NotCallable(String),
     ErrInFunction(String),
+    External(String),
     None
 }
 
@@ -30,7 +30,8 @@ impl std::fmt::Display for FinchError {
             Self::TemplateNotExist(temp_name) => write!(f, "The template {} doesn't exist", temp_name),
             Self::ExpectedObject => write!(f, "Expected type object for dot notation."),
             Self::NotCallable(var) => write!(f, "Property {} is not callable.", var),
-            Self::ErrInFunction(var) => write!(f, "An error occured in the {} function", var)
+            Self::ErrInFunction(var) => write!(f, "An error occured in the {} function", var),
+            Self::External(text) => write!(f, "{}", text),
         }
     }
 }

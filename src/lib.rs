@@ -23,7 +23,9 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
         Ok(cx.undefined())
     })?;
     cx.export_function("compile", |mut cx: FunctionContext| -> JsResult<JsString> {
-        match COMPILER.lock().unwrap().compile(&mut cx) {
+        let name = cx.argument::<JsString>(0)?.value(&mut cx);
+        let data= cx.argument::<JsObject>(1)?;
+        match COMPILER.lock().unwrap().compile(&mut cx, &name, data) {
             Ok(res) => Ok(cx.string(res)),
             Err(err) => panic!("{}", err)
         }

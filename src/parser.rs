@@ -164,7 +164,7 @@ impl<'a> Parser<'a> {
                     self.data.next();
                     self.skip_token('}')?;
                     self.skip_token('}')?;
-                    return Ok((ch_end, FnBlock {
+                    return Ok((ch_end + 2, FnBlock {
                         name: fn_name,
                         params, 
                         block: None,

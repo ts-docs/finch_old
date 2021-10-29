@@ -2,7 +2,7 @@
 use crate::parser::*;
 use crate::error::FinchError;
 use crate::convert::*;
-use neon::types::{JsObject, JsString, JsValue, JsFunction};
+use neon::types::{JsObject, JsValue, JsFunction};
 use neon::handle::{Handle, Root};
 use neon::object::Object;
 use neon::context::{FunctionContext, Context};
@@ -23,7 +23,7 @@ pub struct CompilerContext<'a, 'b> {
     pub compiler: &'a Compiler,
     pub cx: &'a mut FunctionContext<'b>,
     pub locals: HashMap<String, RawValue>,
-    pub data: &'a Handle<'a, JsObject>,
+    pub data: Handle<'a, JsObject>,
     pub original: &'a str
 }
 
@@ -42,28 +42,23 @@ impl Compiler {
         Ok(())
     }
 
-    pub fn compile(&self, cx: &mut FunctionContext) -> FinchResult<String> {
-        let name = cx.argument::<JsString>(0).map_err(|_| FinchError::InvalidArg(0))?.value(cx);
-        let data= cx.argument::<JsObject>(1).map_err(|_| FinchError::InvalidArg(1))?;
-        let (og, temp) = self.templates.get(&name).ok_or(FinchError::TemplateNotExist(name))?;
+    pub fn compile(&self, cx: &mut FunctionContext, name: &str, data: Handle<JsObject>) -> FinchResult<String> {
+        let (og, temp) = self.templates.get(name).ok_or(FinchError::TemplateNotExist(name.to_string()))?;
         temp.compile(&mut CompilerContext {
             compiler: self,
             cx,
             locals: HashMap::new(),
-            data: &data,
+            data: data,
             original: og
         })
     }
 
 }
 
-pub trait Compilable<T> {
-    fn compile<'a, 'b>(&self, ctx: &mut CompilerContext<'a, 'b>) -> FinchResult<T>;
-}
 
-impl<'a> Compilable<String> for SubText {
+impl<'a> SubText {
 
-    fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<String> {
+    pub fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<String> {
         let mut res = String::new();
         let mut last_temp_end = self.pos.start;
         for temp in &self.templates {
@@ -94,17 +89,31 @@ impl<'a> Compilable<String> for SubText {
 
 impl ExpressionKind {
 
-    fn compile_to_js<'a, 'b>(&self, ctx: &mut CompilerContext<'a, 'b>) -> FinchResult<Handle<'b, JsValue>> {
+    pub fn compile_to_js<'a, 'b>(&self, ctx: &mut CompilerContext<'a, 'b>) -> FinchResult<Handle<'b, JsValue>> {
         match self {
             ExpressionKind::String(val) => Ok(ctx.cx.string(val.as_str()).upcast::<JsValue>()),
             ExpressionKind::Number(num) => Ok(ctx.cx.number(*num).upcast::<JsValue>()),
             ExpressionKind::Bool(bol) => Ok(ctx.cx.boolean(*bol).upcast::<JsValue>()),
             ExpressionKind::Undefined => Ok(ctx.cx.undefined().upcast::<JsValue>()),
             ExpressionKind::Null => Ok(ctx.cx.null().upcast::<JsValue>()),
-            ExpressionKind::Var(val) => Ok(ctx.data.get(ctx.cx, val.as_str()).map_err(|_| FinchError::PropNotExist(val.to_string()))?),
+            ExpressionKind::Var(val) => {
+                if let Some(thing) = ctx.locals.get(val) {
+                    return Ok(thing.clone(ctx.cx).js(ctx.cx));
+                } 
+                Ok(ctx.data.get(ctx.cx, val.as_str()).map_err(|_| FinchError::PropNotExist(val.to_string()))?)
+            },
             ExpressionKind::VarDot(path) => {
+                let joined = path.join(".");
+                if let Some(thing) = ctx.locals.get(&joined) {
+                    return Ok(thing.clone(ctx.cx).js(ctx.cx));
+                }
                 let first = &path[0];
-                let mut dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
+                let mut dat: Handle<JsValue>;
+                if let Some(thing) = ctx.locals.get(first) {
+                    dat = thing.clone(ctx.cx).js(ctx.cx);
+                } else {
+                    dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
+                }
                 for item in path.iter().skip(1) {
                     dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, item.as_str()).map_err(|_| FinchError::ExpectedObject)?;
                 };
@@ -117,9 +126,9 @@ impl ExpressionKind {
 
 }
 
-impl Compilable<RawValue> for ExpressionKind {
+impl<'a> ExpressionKind {
 
-    fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<RawValue> {
+    pub fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<RawValue> {
         match self {
             ExpressionKind::String(val) => Ok(RawValue::String(val.to_string())),
             ExpressionKind::Bool(val) => Ok(RawValue::Boolean(*val)),
@@ -128,24 +137,29 @@ impl Compilable<RawValue> for ExpressionKind {
             ExpressionKind::Undefined => Ok(RawValue::Undefined),
             ExpressionKind::Var(val) => {
                 if let Some(thing) = ctx.locals.get(val) {
-                    return Ok(thing.clone());
+                    return Ok(thing.clone(ctx.cx));
                 }
                 let dat = ctx.data.get(ctx.cx, val.as_str()).map_err(|_| FinchError::PropNotExist(val.to_string()))?.raw(ctx.cx);
-                ctx.locals.insert(val.to_string(), dat.clone());
+                ctx.locals.insert(val.to_string(), dat.clone(ctx.cx));
                 Ok(dat)
             },
             ExpressionKind::VarDot(path) => {
                 let joined = path.join(".");
                 if let Some(thing) = ctx.locals.get(&joined) {
-                    return Ok(thing.clone());
+                    return Ok(thing.clone(ctx.cx));
                 }
                 let first = &path[0];
-                let mut dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
+                let mut dat: Handle<JsValue>;
+                if let Some(thing) = ctx.locals.get(first) {
+                    dat = thing.clone(ctx.cx).js(ctx.cx);
+                } else {
+                    dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
+                }
                 for item in path.iter().skip(1) {
                     dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, item.as_str()).map_err(|_| FinchError::ExpectedObject)?;
                 };
                 let raw_thing = dat.raw(ctx.cx);
-                ctx.locals.insert(joined, raw_thing.clone());
+                ctx.locals.insert(joined, raw_thing.clone(ctx.cx));
                 Ok(raw_thing)
             }
             ExpressionKind::Unary(exp) => {
