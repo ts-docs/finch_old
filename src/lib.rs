@@ -16,12 +16,14 @@ lazy_static! {
 
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
+
     cx.export_function("addTemplate", |mut cx: FunctionContext| -> JsResult<JsUndefined> {
         let name = cx.argument::<JsString>(0)?.value(&mut cx);
         let value = cx.argument::<JsString>(1)?.value(&mut cx);
         COMPILER.lock().unwrap().add_template(&name, &value).unwrap();
         Ok(cx.undefined())
     })?;
+
     cx.export_function("compile", |mut cx: FunctionContext| -> JsResult<JsString> {
         let name = cx.argument::<JsString>(0)?.value(&mut cx);
         let data= cx.argument::<JsObject>(1)?;
@@ -30,5 +32,19 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
             Err(err) => panic!("{}", err)
         }
     })?;
+
+    cx.export_function("addHelper", |mut cx: FunctionContext| -> JsResult<JsUndefined> {
+        let name = cx.argument::<JsString>(0)?.value(&mut cx);
+        let value = cx.argument::<JsFunction>(1)?.root(&mut cx);
+        COMPILER.lock().unwrap().add_helper(name, value);
+        Ok(cx.undefined())
+    })?;
+
+    cx.export_function("removeHelper", |mut cx: FunctionContext| -> JsResult<JsUndefined> {
+        let name = cx.argument::<JsString>(0)?.value(&mut cx);
+        COMPILER.lock().unwrap().helpers.remove(&name);
+        Ok(cx.undefined())
+    })?;
+
     Ok(())
 }

@@ -74,11 +74,11 @@ impl<'a> IntoRawValue<'a> for Handle<'a, JsValue> {
 }
 
 impl RawValue {
-    pub fn js<'a>(self, cx: &mut FunctionContext<'a>) -> Handle<'a, JsValue> {
+    pub fn js<'a>(&self, cx: &mut FunctionContext<'a>) -> Handle<'a, JsValue> {
         match self {
             RawValue::String(val) => cx.string(val).upcast::<JsValue>(),
-            RawValue::Number(num) => cx.number(num).upcast::<JsValue>(),
-            RawValue::Boolean(b) => cx.boolean(b).upcast::<JsValue>(),
+            RawValue::Number(num) => cx.number(*num).upcast::<JsValue>(),
+            RawValue::Boolean(b) => cx.boolean(*b).upcast::<JsValue>(),
             RawValue::Undefined => cx.undefined().upcast::<JsValue>(),
             RawValue::Null => cx.null().upcast::<JsValue>(),
             RawValue::Vec(v) => {

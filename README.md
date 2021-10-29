@@ -1,6 +1,6 @@
 # finch
 
-A super fast and efficient template rendering engine for node.js! 
+A super fast and efficient template rendering engine for node.js, inspired by **Handlebars**. 
 
 ## Building blocks
 

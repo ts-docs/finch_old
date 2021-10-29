@@ -2,7 +2,7 @@
 use crate::parser::*;
 use crate::error::FinchError;
 use crate::convert::*;
-use neon::types::{JsObject, JsValue, JsFunction};
+use neon::types::{JsObject, JsValue, JsFunction, JsArray};
 use neon::handle::{Handle, Root};
 use neon::object::Object;
 use neon::context::{FunctionContext, Context};
@@ -42,6 +42,10 @@ impl Compiler {
         Ok(())
     }
 
+    pub fn add_helper(&mut self, name: String, func: Root<JsFunction>) {
+        self.helpers.insert(name, FnBlockHelper::Js(func));
+    }
+
     pub fn compile(&self, cx: &mut FunctionContext, name: &str, data: Handle<JsObject>) -> FinchResult<String> {
         let (og, temp) = self.templates.get(name).ok_or(FinchError::TemplateNotExist(name.to_string()))?;
         temp.compile(&mut CompilerContext {
@@ -55,7 +59,6 @@ impl Compiler {
 
 }
 
-
 impl<'a> SubText {
 
     pub fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<String> {
@@ -64,14 +67,7 @@ impl<'a> SubText {
         for temp in &self.templates {
             let temp_str = match &temp.kind {
                 TemplateKind::Expression(exp) => exp.compile(ctx)?.into_string(),
-                TemplateKind::Block(bl) => {
-                    if let Some(func) = ctx.compiler.helpers.get(&bl.name) {
-                        match func {
-                            FnBlockHelper::Native(function) => function(bl, ctx)?,
-                            _ => String::new()
-                        }
-                    } else { String::new() }
-                }
+                TemplateKind::Block(bl) => bl.compile(ctx)?
             };
             if last_temp_end < temp.pos.start {
                 res += &ctx.original[last_temp_end..temp.pos.start];
@@ -87,6 +83,31 @@ impl<'a> SubText {
 
 }
 
+impl FnBlock {
+    pub fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<String> {
+        if let Some(func) = ctx.compiler.helpers.get(&self.name) {
+            match func {
+                FnBlockHelper::Native(function) => function(self, ctx),
+                FnBlockHelper::Js(func) => {
+                    let func = func.to_inner(ctx.cx);
+                    let args_arr = JsArray::new(ctx.cx, self.params.len() as u32);
+                    for (ind, param) in self.params.iter().enumerate() {
+                        let param_js = param.compile_to_js(ctx)?;
+                        args_arr.set(ctx.cx, ind as u32, param_js).map_err(|er| FinchError::External(er.to_string()))?;
+                    }
+                    let body = if let Some(b) = &self.block {
+                        let compiled_block = b.compile(ctx)?;
+                        ctx.cx.string(compiled_block).upcast::<JsValue>()
+                    } else { ctx.cx.undefined().upcast::<JsValue>() };
+                    let undefined = ctx.cx.undefined();
+                    let res = func.call(ctx.cx, undefined, vec![args_arr.upcast::<JsValue>(), body]).map_err(|er| FinchError::External(er.to_string()))?;
+                    Ok(res.raw(ctx.cx).to_string())
+                }
+            }
+        } else { Err(FinchError::HelperNotFound(self.name.to_string())) }
+    }
+}
+
 impl ExpressionKind {
 
     pub fn compile_to_js<'a, 'b>(&self, ctx: &mut CompilerContext<'a, 'b>) -> FinchResult<Handle<'b, JsValue>> {
@@ -98,19 +119,19 @@ impl ExpressionKind {
             ExpressionKind::Null => Ok(ctx.cx.null().upcast::<JsValue>()),
             ExpressionKind::Var(val) => {
                 if let Some(thing) = ctx.locals.get(val) {
-                    return Ok(thing.clone(ctx.cx).js(ctx.cx));
+                    return Ok(thing.js(ctx.cx));
                 } 
                 Ok(ctx.data.get(ctx.cx, val.as_str()).map_err(|_| FinchError::PropNotExist(val.to_string()))?)
             },
             ExpressionKind::VarDot(path) => {
                 let joined = path.join(".");
                 if let Some(thing) = ctx.locals.get(&joined) {
-                    return Ok(thing.clone(ctx.cx).js(ctx.cx));
+                    return Ok(thing.js(ctx.cx));
                 }
                 let first = &path[0];
                 let mut dat: Handle<JsValue>;
                 if let Some(thing) = ctx.locals.get(first) {
-                    dat = thing.clone(ctx.cx).js(ctx.cx);
+                    dat = thing.js(ctx.cx);
                 } else {
                     dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
                 }
@@ -123,10 +144,6 @@ impl ExpressionKind {
             ExpressionKind::Call{var: _, params: _} => Ok(self.compile(ctx)?.js(ctx.cx))
         }
     }
-
-}
-
-impl<'a> ExpressionKind {
 
     pub fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<RawValue> {
         match self {
@@ -151,7 +168,7 @@ impl<'a> ExpressionKind {
                 let first = &path[0];
                 let mut dat: Handle<JsValue>;
                 if let Some(thing) = ctx.locals.get(first) {
-                    dat = thing.clone(ctx.cx).js(ctx.cx);
+                    dat = thing.js(ctx.cx);
                 } else {
                     dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
                 }
@@ -202,4 +219,5 @@ impl<'a> ExpressionKind {
             }
         }
     }
+
 }

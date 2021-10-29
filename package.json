@@ -29,5 +29,7 @@
     "url": "https://github.com/ts-docs/finch/issues"
   },
   "homepage": "https://github.com/ts-docs/finch#readme",
-  "dependencies": {}
+  "dependencies": {
+    "handlebars": "^4.7.7"
+  }
 }
