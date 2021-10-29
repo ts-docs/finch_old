@@ -2,22 +2,29 @@
 use crate::parser::*;
 use crate::error::FinchError;
 use crate::convert::*;
-use neon::prelude::JsFunction;
-use neon::types::{JsObject, JsString, JsValue};
-use neon::handle::{Handle};
+use neon::types::{JsObject, JsString, JsValue, JsFunction};
+use neon::handle::{Handle, Root};
 use neon::object::Object;
 use neon::context::{FunctionContext, Context};
 use std::collections::HashMap;
+use crate::default_helpers;
+
+pub enum FnBlockHelper {
+    Native(fn(block: &FnBlock, cx: &mut CompilerContext) -> FinchResult<String>),
+    Js(Root<JsFunction>)
+}
 
 pub struct Compiler {
     pub templates: HashMap<String, (String, SubText)>,
+    pub helpers: HashMap<String, FnBlockHelper>
 }
 
 pub struct CompilerContext<'a, 'b> {
-    cx: &'a mut FunctionContext<'b>,
-    locals: HashMap<String, RawValue>,
-    data: &'a Handle<'a, JsObject>,
-    original: &'a str
+    pub compiler: &'a Compiler,
+    pub cx: &'a mut FunctionContext<'b>,
+    pub locals: HashMap<String, RawValue>,
+    pub data: &'a Handle<'a, JsObject>,
+    pub original: &'a str
 }
 
 impl Compiler {
@@ -25,6 +32,7 @@ impl Compiler {
     pub fn new() -> Self {
         Self { 
             templates: HashMap::new(),
+            helpers: default_helpers::init()
          }
     }
 
@@ -39,6 +47,7 @@ impl Compiler {
         let data= cx.argument::<JsObject>(1).map_err(|_| FinchError::InvalidArg(1))?;
         let (og, temp) = self.templates.get(&name).ok_or(FinchError::TemplateNotExist(name))?;
         temp.compile(&mut CompilerContext {
+            compiler: self,
             cx,
             locals: HashMap::new(),
             data: &data,
@@ -56,11 +65,18 @@ impl<'a> Compilable<String> for SubText {
 
     fn compile(&self, ctx: &mut CompilerContext) -> FinchResult<String> {
         let mut res = String::new();
-        let mut last_temp_end = 0;
+        let mut last_temp_end = self.pos.start;
         for temp in &self.templates {
             let temp_str = match &temp.kind {
-                TemplateKind::Expression(exp) => exp.compile(ctx)?.convert_to_string(),
-                TemplateKind::Block(_) => String::new()
+                TemplateKind::Expression(exp) => exp.compile(ctx)?.into_string(),
+                TemplateKind::Block(bl) => {
+                    if let Some(func) = ctx.compiler.helpers.get(&bl.name) {
+                        match func {
+                            FnBlockHelper::Native(function) => function(bl, ctx)?,
+                            _ => String::new()
+                        }
+                    } else { String::new() }
+                }
             };
             if last_temp_end < temp.pos.start {
                 res += &ctx.original[last_temp_end..temp.pos.start];
@@ -68,7 +84,9 @@ impl<'a> Compilable<String> for SubText {
             last_temp_end = temp.pos.end;
             res += &temp_str;
         }
-        res += &ctx.original[last_temp_end..ctx.original.len()];
+        if self.pos.end > last_temp_end {
+            res += &ctx.original[last_temp_end..self.pos.end];
+        }
         Ok(res)
     }
 

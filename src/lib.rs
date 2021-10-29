@@ -2,6 +2,7 @@ use neon::prelude::*;
 mod parser;
 mod error;
 mod convert;
+mod default_helpers;
 mod compiler;
 use compiler::Compiler;
 use std::{sync::Mutex};

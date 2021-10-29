@@ -115,7 +115,7 @@ impl<'a> Parser<'a> {
                     '#' => {
                         self.data.next();
                         let temp_kind = self.parse_block()?;
-                        templates.push(Template { pos: ch.0..temp_kind.0, kind: TemplateKind::Block(temp_kind.1) });
+                        templates.push(Template { pos: ch.0..(temp_kind.0 + 1), kind: TemplateKind::Block(temp_kind.1) });
                     },
                     '/' => {
                         self.data.next();
@@ -133,7 +133,7 @@ impl<'a> Parser<'a> {
                         };
                         return Ok((
                             end,
-                            SubText { pos: start..(next_start - 1), templates },
+                            SubText { pos: start..(next_start - 2), templates },
                             chain
                         ))
                     },
