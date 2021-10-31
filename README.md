@@ -18,3 +18,5 @@ console.log(Finch.compile("hello_world", {name: "Google", world: "Finch"}));
 ## Syntax
 
 Finch extends the handlebars syntax all the while using the native speed of the Rust programming language.
+There are some pretty big differences with the handlebars syntax, though.
+
