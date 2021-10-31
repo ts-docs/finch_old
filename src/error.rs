@@ -33,7 +33,7 @@ impl std::fmt::Display for FinchError {
             Self::NotCallable(var) => write!(f, "Property {} is not callable.", var),
             Self::ErrInFunction(var) => write!(f, "An error occured in the {} function", var),
             Self::External(text) => write!(f, "{}", text),
-            Self::HelperNotFound(helper_name) => write!(f, "Couldn't find helper {}", helper_name)
+            Self::HelperNotFound(helper_name) => write!(f, "Couldn't find helper \"{}\"", helper_name)
         }
     }
 }

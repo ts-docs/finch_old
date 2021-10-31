@@ -3,6 +3,7 @@ mod parser;
 mod error;
 mod convert;
 mod default_helpers;
+mod memory;
 mod compiler;
 use compiler::Compiler;
 use std::{sync::Mutex};
@@ -32,7 +33,7 @@ fn main(mut cx: ModuleContext) -> NeonResult<()> {
             Err(err) => panic!("{}", err)
         }
     })?;
-
+    
     cx.export_function("addHelper", |mut cx: FunctionContext| -> JsResult<JsUndefined> {
         let name = cx.argument::<JsString>(0)?.value(&mut cx);
         let value = cx.argument::<JsFunction>(1)?.root(&mut cx);

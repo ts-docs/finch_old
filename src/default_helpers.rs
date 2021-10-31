@@ -1,7 +1,7 @@
 
 use std::collections::HashMap;
 use neon::prelude::{JsObject, Context, Object, JsFunction};
-use crate::{compiler::{FnBlockHelper}, convert::{RawValue, IntoRawValue}, error::FinchError};
+use crate::{compiler::{FnBlockHelper}, convert::{RawValue, IntoRawValue}, error::FinchError, parser::ExpressionKind};
 
 pub fn init() -> HashMap<String, FnBlockHelper> {
     let mut res = HashMap::new();
@@ -9,13 +9,14 @@ pub fn init() -> HashMap<String, FnBlockHelper> {
     res.insert(String::from("each"), FnBlockHelper::Native(|block, ctx| {
         let block_text = block.block.as_ref().unwrap();
          if let RawValue::Vec(var) = block.params[0].compile(ctx)? {
-            if let RawValue::String(name) = block.params[1].compile(ctx)? {
+            if let ExpressionKind::Var(name) = &block.params[1] {
                 let mut res = String::new();
+                ctx.cache.extend();
                 for item in var.iter() {
-                    ctx.locals.insert(name.clone(), item.clone(ctx.cx));
+                    ctx.cache.set(name.clone(), item.clone(ctx.cx));
                     res += &block_text.compile(ctx)?;
                 }
-                ctx.locals.remove(&name);
+                ctx.cache.destroy();
                 Ok(res)
             } else { Err(FinchError::InvalidArg(1)) }
          } else { Err(FinchError::InvalidArg(0)) }

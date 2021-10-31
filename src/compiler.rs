@@ -2,6 +2,7 @@
 use crate::parser::*;
 use crate::error::FinchError;
 use crate::convert::*;
+use crate::memory::*;
 use neon::types::{JsObject, JsValue, JsFunction, JsArray};
 use neon::handle::{Handle, Root};
 use neon::object::Object;
@@ -22,7 +23,7 @@ pub struct Compiler {
 pub struct CompilerContext<'a, 'b> {
     pub compiler: &'a Compiler,
     pub cx: &'a mut FunctionContext<'b>,
-    pub locals: HashMap<String, RawValue>,
+    pub cache: Memory,
     pub data: Handle<'a, JsObject>,
     pub original: &'a str
 }
@@ -51,7 +52,7 @@ impl Compiler {
         temp.compile(&mut CompilerContext {
             compiler: self,
             cx,
-            locals: HashMap::new(),
+            cache: Memory::new(),
             data: data,
             original: og
         })
@@ -118,23 +119,20 @@ impl ExpressionKind {
             ExpressionKind::Undefined => Ok(ctx.cx.undefined().upcast::<JsValue>()),
             ExpressionKind::Null => Ok(ctx.cx.null().upcast::<JsValue>()),
             ExpressionKind::Var(val) => {
-                if let Some(thing) = ctx.locals.get(val) {
+                if let Some(thing) = ctx.cache.get(val) {
                     return Ok(thing.js(ctx.cx));
                 } 
                 Ok(ctx.data.get(ctx.cx, val.as_str()).map_err(|_| FinchError::PropNotExist(val.to_string()))?)
             },
             ExpressionKind::VarDot(path) => {
-                let joined = path.join(".");
-                if let Some(thing) = ctx.locals.get(&joined) {
-                    return Ok(thing.js(ctx.cx));
-                }
                 let first = &path[0];
-                let mut dat: Handle<JsValue>;
-                if let Some(thing) = ctx.locals.get(first) {
-                    dat = thing.js(ctx.cx);
+                let mut dat = if let Some(thing) = ctx.cache.get(first) {
+                    thing.js(ctx.cx)
+                } else if let Some(thing) = ctx.cache.get(&path.join(".")) {
+                    thing.js(ctx.cx)
                 } else {
-                    dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
-                }
+                    ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?
+                };
                 for item in path.iter().skip(1) {
                     dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, item.as_str()).map_err(|_| FinchError::ExpectedObject)?;
                 };
@@ -153,30 +151,29 @@ impl ExpressionKind {
             ExpressionKind::Null => Ok(RawValue::Null),
             ExpressionKind::Undefined => Ok(RawValue::Undefined),
             ExpressionKind::Var(val) => {
-                if let Some(thing) = ctx.locals.get(val) {
+                if let Some(thing) = ctx.cache.get(val) {
                     return Ok(thing.clone(ctx.cx));
                 }
                 let dat = ctx.data.get(ctx.cx, val.as_str()).map_err(|_| FinchError::PropNotExist(val.to_string()))?.raw(ctx.cx);
-                ctx.locals.insert(val.to_string(), dat.clone(ctx.cx));
+                ctx.cache.set(val.to_string(), dat.clone(ctx.cx));
                 Ok(dat)
             },
             ExpressionKind::VarDot(path) => {
-                let joined = path.join(".");
-                if let Some(thing) = ctx.locals.get(&joined) {
-                    return Ok(thing.clone(ctx.cx));
-                }
                 let first = &path[0];
-                let mut dat: Handle<JsValue>;
-                if let Some(thing) = ctx.locals.get(first) {
-                    dat = thing.js(ctx.cx);
-                } else {
-                    dat = ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?;
+                let joined = path.join(".");
+                let mut dat = if let Some(thing) = ctx.cache.get(first) {
+                    thing.js(ctx.cx)
+                } else if let Some(thing) = ctx.cache.get(&joined) {
+                    thing.js(ctx.cx)
                 }
+                else {
+                    ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?
+                };
                 for item in path.iter().skip(1) {
                     dat = dat.downcast::<JsObject, _>(ctx.cx).map_err(|_| FinchError::ExpectedObject)?.get(ctx.cx, item.as_str()).map_err(|_| FinchError::ExpectedObject)?;
                 };
                 let raw_thing = dat.raw(ctx.cx);
-                ctx.locals.insert(joined, raw_thing.clone(ctx.cx));
+                ctx.cache.set(joined, raw_thing.clone(ctx.cx));
                 Ok(raw_thing)
             }
             ExpressionKind::Unary(exp) => {
