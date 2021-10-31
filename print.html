@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="Syntax/Helpers.html"><strong aria-hidden="true">2.2.</strong> Helpers</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="Syntax/Helpers.html"><strong aria-hidden="true">2.2.</strong> Helpers</a></li></ol></li><li class="chapter-item expanded "><a href="Helpers/index.html"><strong aria-hidden="true">3.</strong> Helpers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Helpers/if.html"><strong aria-hidden="true">3.1.</strong> if</a></li><li class="chapter-item expanded "><a href="Helpers/js.html"><strong aria-hidden="true">3.2.</strong> js</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -215,6 +215,90 @@ variable1 &lt;= variable2
 {{/#else}} 
     ...content...
 {{/}}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="helpers-1"><a class="header" href="#helpers-1">Helpers</a></h1>
+<p>Finch provides 4 very useful built-in helpers:</p>
+<ul>
+<li><code>if</code></li>
+<li><code>each</code></li>
+<li><code>template</code></li>
+<li><code>js</code></li>
+</ul>
+<p>With these four helpers, you get iteration, logic, inheritance and customized behaviour. You can also create custom helpers, though the API right now is very limited.</p>
+<h2 id="custom-helpers"><a class="header" href="#custom-helpers">Custom Helpers</a></h2>
+<p>Registering custom helpers is done with the <code>addHelper</code> function. Currently, all arguments and the body come pre-compiled, which could be a performance concern, you may not want to compile the body if a condition is met, for example. In the future, you'll have to call a function to compile the arguments and the body. Custom helpers also cannot access followup blocks currently.</p>
+<pre><code class="language-js">Finch.addHelper(&quot;helperName&quot;, (args, body) =&gt; {
+    // Currently, all arguments and the body come pre-compiled, but that could be a performance concern.
+    // In the future, you'll have to call a function to compile the arguments and body.
+    // Currently you cannot access followup blocks.
+    const arr = args[0];
+    const delimiter = args[1];
+    return arr.join(delimiter || &quot;, &quot;);
+});
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="if-helper"><a class="header" href="#if-helper">If helper</a></h1>
+<p><strong>Syntax:</strong></p>
+<pre><code>{{#if condition}} 
+   ...content...
+{{/}}
+</code></pre>
+<p><strong>Possible followups:</strong></p>
+<p><em>if:</em>
+Will be checked if the condition of the previous if statement returns false. Acts as an <code>else if</code>.</p>
+<pre><code>{{/#if condition}}
+   ...content...
+{{/}}
+</code></pre>
+<p><em>else</em></p>
+<pre><code>{{/#else}}
+    ...content...
+{{/}}
+</code></pre>
+<h2 id="example"><a class="header" href="#example">Example</a></h2>
+<pre><code class="language-js">Finch.addTemplate(&quot;example&quot;, `
+&lt;div&gt;
+    {{#if hasFlag(&quot;admin&quot;) }} 
+        &lt;p&gt;Admin&lt;/p&gt;
+    {{/#else}}
+        &lt;p&gt;Regular User&lt;/p&gt;
+    {{/}}
+&lt;/div&gt;
+`);
+
+
+console.log(Finch.compile(&quot;example&quot;, {
+    hasFlag: (flag) =&gt; {
+        if (flag === &quot;admin&quot;) return true;
+    }
+}));
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="js-helper"><a class="header" href="#js-helper">JS Helper</a></h1>
+<p>The JS helper allows you to execute javascript code and render the return value. Use the <code>data</code> variable to access the data that was sent to the template. You cannot use template syntax inside the code.</p>
+<p><strong>Syntax:</strong></p>
+<pre><code>{{#js}}
+    ...code...
+{{/js}}
+</code></pre>
+<h2 id="example-1"><a class="header" href="#example-1">Example</a></h2>
+<pre><code class="language-js">Finch.addTemplate(&quot;example&quot;, `
+    &lt;div&gt;
+        {{js}}
+            let res = &quot;&quot;;
+            if (data.admin) res += &quot;&lt;span&gt;Admin&lt;/span&gt;&quot;;
+            if (data.host) res += &quot;&lt;span&gt;Host&lt;/span&gt;&quot;;
+            return res;
+        {{/}}
+    &lt;/div&gt;
+`)
+
+console.log(Finch.compile(&quot;example&quot;, {
+    admin: true,
+    host: false
+}));
+</code></pre>
+<h2 id="security-concerns"><a class="header" href="#security-concerns">Security concerns</a></h2>
+<p>The executed javascript code is not ran or a VM or anything similar. You should <strong>never</strong> compile untrusted templates (for example, templates received from users) while having the <code>js</code> helper enabled. To disable the <code>js</code> helper, run the following function:</p>
+<pre><code class="language-js">Finch.removeHelper(&quot;js&quot;);
 </code></pre>
 
                     </main>
