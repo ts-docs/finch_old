@@ -36,7 +36,16 @@ Finch.compile("test", {
 // false, Hello World
 ```
 
-### Built-in and custom helpers
+### Built-in helpers
+
+Built-in helpers include:
+
+- each - Loop through an array
+- if / elseif / else
+- js - Run javascript code, the return value gets rendered in
+- template - Comlile a different template
+
+To see more information on each built-in helper check the docs.
 
 ```js
 Finch.addTemplate("test", `
@@ -48,4 +57,21 @@ Finch.addTemplate("test", `
 `);
 
 Finch.compile("test", {numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]})
+```
+
+### Custom helpers (WIP)
+
+You can also create custom helpers!
+
+```js
+Finch.addHelper("codeblock", (args, ctx) => {
+    const lang = args[0].compile();
+    return `
+    <pre>
+    <code language=${lang}>
+        ${ctx.body.compile()}
+    </code>
+    </pre>
+    `
+});
 ```
