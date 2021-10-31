@@ -8,7 +8,7 @@ The JS helper allows you to execute javascript code and render the return value.
 ```
 {{#js}}
     ...code...
-{{/js}}
+{{/}}
 ```
 
 ## Example

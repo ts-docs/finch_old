@@ -16,9 +16,6 @@ Registering custom helpers is done with the `addHelper` function. Currently, all
 
 ```js
 Finch.addHelper("helperName", (args, body) => {
-    // Currently, all arguments and the body come pre-compiled, but that could be a performance concern.
-    // In the future, you'll have to call a function to compile the arguments and body.
-    // Currently you cannot access followup blocks.
     const arr = args[0];
     const delimiter = args[1];
     return arr.join(delimiter || ", ");
