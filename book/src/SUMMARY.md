@@ -1,4 +1,7 @@
 
 # Finch
 
-This is a summery.!!!!
+This is the official book for the finch template engine! 
+
+TBD
+
