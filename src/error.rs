@@ -15,6 +15,8 @@ pub enum FinchError {
     External(String),
     HelperNotFound(String),
     NotNumbers,
+    ExpectedBody(String),
+    Custom(String),
     None
 }
 
@@ -25,7 +27,7 @@ impl std::fmt::Display for FinchError {
         match self {
             Self::ExpectedFound(expected, found) => write!(f, "Expected character '{}', but found '{}'", expected, found),
             Self::Expected(expected) => write!(f, "Expected character '{}'", expected),
-            Self::None => write!(f, "Expected a character, but found end of file"),
+            Self::None => write!(f, "An unknown error occured"),
             Self::Unexpected(unexpected) => write!(f, "Unexpected character '{}'", unexpected),
             Self::InvalidNumber => write!(f, "Could not parse number to a 32-bit floating point"),
             Self::MissingPropName => write!(f, "Expected property name after dot (.)"),
@@ -37,7 +39,9 @@ impl std::fmt::Display for FinchError {
             Self::ErrInFunction => write!(f, "An error occured in a JS function"),
             Self::External(text) => write!(f, "{}", text),
             Self::HelperNotFound(helper_name) => write!(f, "Couldn't find helper \"{}\"", helper_name),
-            Self::NotNumbers => write!(f, "Cannot use >, <, >=, <= on non-numbers")
+            Self::NotNumbers => write!(f, "Cannot use >, <, >=, <= on non-numbers"),
+            Self::ExpectedBody(temp) => write!(f, "Expected body for {} helper", temp),
+            Self::Custom(st) => write!(f, "{}", st)
         }
     }
 }

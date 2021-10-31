@@ -163,7 +163,6 @@ pub fn compare_vals(left: &ExpressionKind, right: &ExpressionKind, ctx: &mut Com
             return Err(FinchError::NotNumbers);
         }
     };
-    println!("{}, {}", num_left, num_right);
     Ok(if num_left > num_right { Ordering::Greater }
     else if num_left == num_right { Ordering::Equal }
     else { Ordering::Less })

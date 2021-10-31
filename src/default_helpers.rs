@@ -42,6 +42,28 @@ pub fn init() -> HashMap<String, FnBlockHelper> {
         let result = res.call(ctx.cx, undefined, vec![ctx.data]).map_err(|er| FinchError::External(er.to_string()))?;
         Ok(result.raw(ctx.cx).to_string())
     }));
+    
+    res.insert(String::from("if"), FnBlockHelper::Native(|block, ctx| {
+        let exp = block.params[0].compile(ctx)?;
+        let insides = block.block.as_ref().ok_or(FinchError::ExpectedBody(String::from("if")))?;
+        if !exp.is_falsey() {
+            return Ok(insides.compile(ctx)?);
+        } else if let Some(followup) = &block.chain {
+            match followup.name.as_str() {
+                "if" => followup.compile(ctx),
+                "else" => if let Some(else_bl) = &followup.block {
+                    else_bl.compile(ctx)
+                } else {
+                    Err(FinchError::ExpectedBody(String::from("else")))
+                }
+                _ => {
+                    Err(FinchError::Custom(format!("Expected if / else follow up blocks, found {}", followup.name)))
+                }
+            }
+        } else {
+            Ok(String::new())
+        }
+    }));
 
     res
 }
