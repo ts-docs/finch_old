@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">1.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">1.1.</strong> Expressions</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,8 +135,63 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="syntax"><a class="header" href="#syntax">Syntax</a></h1>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p><code>Finch</code> is a fast template engine for node.js projects, written in rust. It's original purpose is to replace <code>handlebars</code> for the <a href="https://github.com/ts-docs/ts-docs">ts-docs</a> project.</p>
+<p>This book lists off all of finches features and provides a few useful tips to increase performance. </p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="syntax"><a class="header" href="#syntax">Syntax</a></h1>
+<p>Finch's syntax is very similar to handlebar's, but there are a few major differences, which are meant to make the syntax cleaner and simpler. </p>
+<h2 id="differences"><a class="header" href="#differences">Differences</a></h2>
+<h3 id="this"><a class="header" href="#this"><code>this</code></a></h3>
+<p>There's no <code>this</code> in finch, and there's also no <code>path</code> expressions. To access a member in an object, use the dot notation (<code>obj.member</code>). You cannot use <code>/</code>, and you also cannot go back (<code>../</code>)</p>
+<h3 id="helper-syntax"><a class="header" href="#helper-syntax">Helper syntax</a></h3>
+<p><strong>Handlebars:</strong></p>
+<pre><code>{{#if value}}
+  ...content...
+{{else}}
+  ...otherwise...
+{{/if}}
+</code></pre>
+<p><strong>Finch:</strong></p>
+<pre><code>{{#if value}}
+    ...content...
+{{/#else}}
+    ...otherwise...
+{{/}}
+</code></pre>
+<p>The handlebars syntax here is quite weird and ambiguous, finch has a simple <strong>block followup</strong> system which allows for easy chaining of blocks, more on that later.</p>
+<h3 id="partials"><a class="header" href="#partials">Partials</a></h3>
+<p>Finch has no partiasl, instead templates act as partials directly. Templates can be rendered within other templates with the <code>template</code> helper.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="expressions"><a class="header" href="#expressions">Expressions</a></h1>
+<p>Unlike handlebars, finch has many useful expressions so you don't have to create a custom helper just to check if two variables are equal &gt;:(</p>
+<h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
+<pre><code>&quot;Strings&quot;,
+3.14 
+true
+undefined
+null
+</code></pre>
+<h2 id="path-expressions"><a class="header" href="#path-expressions">Path expressions</a></h2>
+<p>You can index variables which are objects / arrays and access their properties / elements.</p>
+<p><strong>Indexing an object:</strong>
+<code>variable.name</code></p>
+<p><strong>Indexing an array:</strong>
+<code>variable.arr_member.0</code></p>
+<p><em>(Gets the first element) ^</em></p>
+<h2 id="comparions"><a class="header" href="#comparions">Comparions</a></h2>
+<p>You can use the following operators to compare two variables or literals:</p>
+<pre><code>variable1 == variable2
+variable1 != variable2
+variable1 &gt; variable2
+variable1 &gt;= variable2
+variable1 &lt; variable2
+variable1 &lt;= variable2
+</code></pre>
+<h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
+<p>You can use <code>&amp;&amp;</code> (and) and <code>||</code> (or) to get a boolean result.</p>
+<h2 id="function-calls"><a class="header" href="#function-calls">Function calls</a></h2>
+<p>You can call variables or path expressions (or even other function calls), and even pass parameters:</p>
+<pre><code>{{variable.fn(...parameters)}}
+</code></pre>
 
                     </main>
 

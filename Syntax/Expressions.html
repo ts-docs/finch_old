@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../Syntax/index.html"><strong aria-hidden="true">1.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../Syntax/Expressions.html" class="active"><strong aria-hidden="true">1.1.</strong> Expressions</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../Syntax/Expressions.html" class="active"><strong aria-hidden="true">2.1.</strong> Expressions</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -135,6 +135,36 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="expressions"><a class="header" href="#expressions">Expressions</a></h1>
+<p>Unlike handlebars, finch has many useful expressions so you don't have to create a custom helper just to check if two variables are equal &gt;:(</p>
+<h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
+<pre><code>&quot;Strings&quot;,
+3.14 
+true
+undefined
+null
+</code></pre>
+<h2 id="path-expressions"><a class="header" href="#path-expressions">Path expressions</a></h2>
+<p>You can index variables which are objects / arrays and access their properties / elements.</p>
+<p><strong>Indexing an object:</strong>
+<code>variable.name</code></p>
+<p><strong>Indexing an array:</strong>
+<code>variable.arr_member.0</code></p>
+<p><em>(Gets the first element) ^</em></p>
+<h2 id="comparions"><a class="header" href="#comparions">Comparions</a></h2>
+<p>You can use the following operators to compare two variables or literals:</p>
+<pre><code>variable1 == variable2
+variable1 != variable2
+variable1 &gt; variable2
+variable1 &gt;= variable2
+variable1 &lt; variable2
+variable1 &lt;= variable2
+</code></pre>
+<h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
+<p>You can use <code>&amp;&amp;</code> (and) and <code>||</code> (or) to get a boolean result.</p>
+<h2 id="function-calls"><a class="header" href="#function-calls">Function calls</a></h2>
+<p>You can call variables or path expressions (or even other function calls), and even pass parameters:</p>
+<pre><code>{{variable.fn(...parameters)}}
+</code></pre>
 
                     </main>
 
