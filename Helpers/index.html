@@ -146,9 +146,6 @@
 <h2 id="custom-helpers"><a class="header" href="#custom-helpers">Custom Helpers</a></h2>
 <p>Registering custom helpers is done with the <code>addHelper</code> function. Currently, all arguments and the body come pre-compiled, which could be a performance concern, you may not want to compile the body if a condition is met, for example. In the future, you'll have to call a function to compile the arguments and the body. Custom helpers also cannot access followup blocks currently.</p>
 <pre><code class="language-js">Finch.addHelper(&quot;helperName&quot;, (args, body) =&gt; {
-    // Currently, all arguments and the body come pre-compiled, but that could be a performance concern.
-    // In the future, you'll have to call a function to compile the arguments and body.
-    // Currently you cannot access followup blocks.
     const arr = args[0];
     const delimiter = args[1];
     return arr.join(delimiter || &quot;, &quot;);
