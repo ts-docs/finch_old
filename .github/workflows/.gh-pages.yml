@@ -19,10 +19,10 @@ jobs:
         with:
           mdbook-version: 'latest'
 
-      - run: mdbook build ./book
+      - run: mdbook build ./book --dest-dir ./docs
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.3
         with:
           branch: gh-pages
-          folder: book
+          folder: docs
