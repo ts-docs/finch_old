@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="Syntax/Helpers.html"><strong aria-hidden="true">2.2.</strong> Helpers</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -160,7 +160,7 @@
 </code></pre>
 <p>The handlebars syntax here is quite weird and ambiguous, finch has a simple <strong>block followup</strong> system which allows for easy chaining of blocks, more on that later.</p>
 <h3 id="partials"><a class="header" href="#partials">Partials</a></h3>
-<p>Finch has no partiasl, instead templates act as partials directly. Templates can be rendered within other templates with the <code>template</code> helper.</p>
+<p>Finch has no partials, instead templates act as partials directly. Templates can be rendered within other templates with the <code>template</code> helper.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="expressions"><a class="header" href="#expressions">Expressions</a></h1>
 <p>Unlike handlebars, finch has many useful expressions so you don't have to create a custom helper just to check if two variables are equal &gt;:(</p>
 <h2 id="literals"><a class="header" href="#literals">Literals</a></h2>
@@ -188,9 +188,33 @@ variable1 &lt;= variable2
 </code></pre>
 <h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
 <p>You can use <code>&amp;&amp;</code> (and) and <code>||</code> (or) to get a boolean result.</p>
+<pre><code>Hello {{rawName || name}}
+</code></pre>
 <h2 id="function-calls"><a class="header" href="#function-calls">Function calls</a></h2>
 <p>You can call variables or path expressions (or even other function calls), and even pass parameters:</p>
 <pre><code>{{variable.fn(...parameters)}}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="helpers"><a class="header" href="#helpers">Helpers</a></h1>
+<p>Finch helpers act exactly like handlebar helpers, except that they can be <strong>followed up</strong> by another helper, which the first helper can use. </p>
+<p>Helpers have a name, parameters, a body, and a followup helper. Parameters, the body and the followup helper are all optional.</p>
+<h2 id="body-less-helper"><a class="header" href="#body-less-helper">Body-less helper</a></h2>
+<pre><code>{{#template argument /}} 
+</code></pre>
+<h2 id="helper-arguments"><a class="header" href="#helper-arguments">Helper arguments</a></h2>
+<p>Helpers can have an unlimited amount of arguments, which can be any expression. Arguments can be separated by either a whitespace, just like handlebars (<code> </code>), or a comma (<code>,</code>). </p>
+<h2 id="helper-body"><a class="header" href="#helper-body">Helper body</a></h2>
+<p>The helper body can contain other helpers, the body of any helper must end with <code>{{/}}</code></p>
+<h2 id="followups"><a class="header" href="#followups">Followups</a></h2>
+<p>You can also provide a followup helper, which will be passed to the first helper, think of it as a continuation, a <strong>chain</strong>. The first helper can do whatever it wants with the followup, it may render it, or it may use it's arguments or body.</p>
+<p>The followup helper must <strong>exactly</strong> start right after the <code>/</code> closing of the first helper.</p>
+<p>Example, an if-else chain:</p>
+<pre><code>{{#if value == 1}} 
+    ...content...
+{{/#if value == 2}}
+    ...content...
+{{/#else}} 
+    ...content...
+{{/}}
 </code></pre>
 
                     </main>
