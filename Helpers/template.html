@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>if - Finch book</title>
+        <title>template - Finch book</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="The finch guide book.">
@@ -75,7 +75,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="../Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="../Syntax/Helpers.html"><strong aria-hidden="true">2.2.</strong> Helpers</a></li></ol></li><li class="chapter-item expanded "><a href="../Helpers/index.html"><strong aria-hidden="true">3.</strong> Helpers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../Helpers/if.html" class="active"><strong aria-hidden="true">3.1.</strong> if</a></li><li class="chapter-item expanded "><a href="../Helpers/each.html"><strong aria-hidden="true">3.2.</strong> each</a></li><li class="chapter-item expanded "><a href="../Helpers/template.html"><strong aria-hidden="true">3.3.</strong> template</a></li><li class="chapter-item expanded "><a href="../Helpers/js.html"><strong aria-hidden="true">3.4.</strong> js</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="../Syntax/Helpers.html"><strong aria-hidden="true">2.2.</strong> Helpers</a></li></ol></li><li class="chapter-item expanded "><a href="../Helpers/index.html"><strong aria-hidden="true">3.</strong> Helpers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../Helpers/if.html"><strong aria-hidden="true">3.1.</strong> if</a></li><li class="chapter-item expanded "><a href="../Helpers/each.html"><strong aria-hidden="true">3.2.</strong> each</a></li><li class="chapter-item expanded "><a href="../Helpers/template.html" class="active"><strong aria-hidden="true">3.3.</strong> template</a></li><li class="chapter-item expanded "><a href="../Helpers/js.html"><strong aria-hidden="true">3.4.</strong> js</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -134,51 +134,36 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="if-helper"><a class="header" href="#if-helper">If helper</a></h1>
+                        <h1 id="template-helper"><a class="header" href="#template-helper">Template helper</a></h1>
+<p>This helper compiles another template with the given data.</p>
 <p><strong>Syntax:</strong></p>
-<pre><code>{{#if condition}} 
-   ...content...
-{{/}}
+<pre><code>{{#template templateName templateData /}}
 </code></pre>
-<p><strong>Possible followups:</strong></p>
-<p><em>if:</em>
-Will be checked if the condition of the previous if statement returns false. Acts as an <code>else if</code>.</p>
-<pre><code>{{/#if condition}}
-   ...content...
-{{/}}
-</code></pre>
-<p><em>else</em></p>
-<pre><code>{{/#else}}
-    ...content...
-{{/}}
-</code></pre>
+<p><em>No-body helper</em></p>
 <h2 id="example"><a class="header" href="#example">Example</a></h2>
-<pre><code class="language-js">Finch.addTemplate(&quot;example&quot;, `
-&lt;div&gt;
-    {{#if hasFlag(&quot;admin&quot;) }} 
-        &lt;p&gt;Admin&lt;/p&gt;
-    {{/#else}}
-        &lt;p&gt;Regular User&lt;/p&gt;
+<pre><code class="language-js">Finch.addTemplate(&quot;user&quot;, &quot;&lt;span&gt;{{number}}. {{name}}&lt;/span&gt;&quot;);
+
+Finch.addTemplate(&quot;users&quot;, `
+    &lt;ul&gt;
+    {{#each users user}} 
+        &lt;li&gt;{{#template &quot;user&quot; user /}}&lt;/li&gt;
     {{/}}
-&lt;/div&gt;
+    &lt;/ul&gt;
 `);
 
-
-console.log(Finch.compile(&quot;example&quot;, {
-    hasFlag: (flag) =&gt; {
-        if (flag === &quot;admin&quot;) return true;
-    }
-}));
+Finch.compile(&quot;users&quot;, {
+    users: [{name: &quot;Google&quot;, number: 0}, {name: &quot;Hidden&quot;, number: 10}, {name: &quot;Zoroark&quot;, number: 68}]
+});
 </code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../Helpers/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../Helpers/each.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="../Helpers/each.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../Helpers/js.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
@@ -187,10 +172,10 @@ console.log(Finch.compile(&quot;example&quot;, {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../Helpers/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../Helpers/each.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="../Helpers/each.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../Helpers/js.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

@@ -76,7 +76,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="Syntax/Helpers.html"><strong aria-hidden="true">2.2.</strong> Helpers</a></li></ol></li><li class="chapter-item expanded "><a href="Helpers/index.html"><strong aria-hidden="true">3.</strong> Helpers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Helpers/if.html"><strong aria-hidden="true">3.1.</strong> if</a></li><li class="chapter-item expanded "><a href="Helpers/js.html"><strong aria-hidden="true">3.2.</strong> js</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="Introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="Syntax/index.html"><strong aria-hidden="true">2.</strong> Syntax</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Syntax/Expressions.html"><strong aria-hidden="true">2.1.</strong> Expressions</a></li><li class="chapter-item expanded "><a href="Syntax/Helpers.html"><strong aria-hidden="true">2.2.</strong> Helpers</a></li></ol></li><li class="chapter-item expanded "><a href="Helpers/index.html"><strong aria-hidden="true">3.</strong> Helpers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="Helpers/if.html"><strong aria-hidden="true">3.1.</strong> if</a></li><li class="chapter-item expanded "><a href="Helpers/each.html"><strong aria-hidden="true">3.2.</strong> each</a></li><li class="chapter-item expanded "><a href="Helpers/template.html"><strong aria-hidden="true">3.3.</strong> template</a></li><li class="chapter-item expanded "><a href="Helpers/js.html"><strong aria-hidden="true">3.4.</strong> js</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -269,6 +269,48 @@ console.log(Finch.compile(&quot;example&quot;, {
     }
 }));
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="each-helper"><a class="header" href="#each-helper">Each helper</a></h1>
+<p>Each iterates over an array, re-compiling it's body on each iteration and concatenating it with a string, which gets returned in the end.</p>
+<p><strong>Syntax:</strong></p>
+<pre><code>{{#each array temporaryVariable}}
+    ...content...
+{{/}}
+</code></pre>
+<p><code>temporaryVariable</code> is the current element.</p>
+<h2 id="example-1"><a class="header" href="#example-1">Example</a></h2>
+<pre><code class="language-js">Finch.addTemplate(&quot;example&quot;, `
+    &lt;ul&gt;
+    {{#each users user}}
+        &lt;li&gt;{{user.number}}. {{user.name}}&lt;/li&gt;
+    {{/}}
+    &lt;/ul&gt;
+`);
+
+Finch.compile(&quot;example&quot;, {
+    users: [{name: &quot;Google&quot;, number: 0}, {name: &quot;Hidden&quot;, number: 10}, {name: &quot;Zoroark&quot;, number: 68}]
+});
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="template-helper"><a class="header" href="#template-helper">Template helper</a></h1>
+<p>This helper compiles another template with the given data.</p>
+<p><strong>Syntax:</strong></p>
+<pre><code>{{#template templateName templateData /}}
+</code></pre>
+<p><em>No-body helper</em></p>
+<h2 id="example-2"><a class="header" href="#example-2">Example</a></h2>
+<pre><code class="language-js">Finch.addTemplate(&quot;user&quot;, &quot;&lt;span&gt;{{number}}. {{name}}&lt;/span&gt;&quot;);
+
+Finch.addTemplate(&quot;users&quot;, `
+    &lt;ul&gt;
+    {{#each users user}} 
+        &lt;li&gt;{{#template &quot;user&quot; user /}}&lt;/li&gt;
+    {{/}}
+    &lt;/ul&gt;
+`);
+
+Finch.compile(&quot;users&quot;, {
+    users: [{name: &quot;Google&quot;, number: 0}, {name: &quot;Hidden&quot;, number: 10}, {name: &quot;Zoroark&quot;, number: 68}]
+});
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="js-helper"><a class="header" href="#js-helper">JS Helper</a></h1>
 <p>The JS helper allows you to execute javascript code and render the return value. Use the <code>data</code> variable to access the data that was sent to the template. You cannot use template syntax inside the code.</p>
 <p><strong>Syntax:</strong></p>
@@ -276,7 +318,7 @@ console.log(Finch.compile(&quot;example&quot;, {
     ...code...
 {{/}}
 </code></pre>
-<h2 id="example-1"><a class="header" href="#example-1">Example</a></h2>
+<h2 id="example-3"><a class="header" href="#example-3">Example</a></h2>
 <pre><code class="language-js">Finch.addTemplate(&quot;example&quot;, `
     &lt;div&gt;
         {{js}}
