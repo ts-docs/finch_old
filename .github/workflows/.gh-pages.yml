@@ -19,7 +19,7 @@ jobs:
         with:
           mdbook-version: 'latest'
 
-      - run: mdbook build
+      - run: mdbook build ./book
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.3
