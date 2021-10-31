@@ -33,4 +33,4 @@ The handlebars syntax here is quite weird and ambiguous, finch has a simple **bl
 
 ### Partials
 
-Finch has no partiasl, instead templates act as partials directly. Templates can be rendered within other templates with the `template` helper.
+Finch has no partials, instead templates act as partials directly. Templates can be rendered within other templates with the `template` helper.

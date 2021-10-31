@@ -217,7 +217,30 @@ impl ExpressionKind {
                             Ordering::Equal | Ordering::Less => RawValue::Boolean(true)
                         })
                     },
-                    _ => Ok(RawValue::Undefined)
+                    BinaryOps::Or(left, right) => {
+                        let left_val = left.compile(ctx)?;
+                        if left_val.is_falsey() {
+                            let right_val = right.compile(ctx)?;
+                            if right_val.is_falsey() {
+                                Ok(RawValue::Boolean(false))
+                            } else {
+                                Ok(right_val)
+                            }
+                        } else {
+                            Ok(left_val)
+                        }
+                    },
+                    BinaryOps::And(left, right) => {
+                        let left_val = left.compile(ctx)?;
+                        if left_val.is_falsey() {
+                            return Ok(RawValue::Boolean(false))
+                        }
+                        let right_val = right.compile(ctx)?;
+                        if right_val.is_falsey() {
+                            return Ok(RawValue::Boolean(false))
+                        }
+                        Ok(right_val)
+                    }
                 }
             },
             ExpressionKind::Call{var, params} => {

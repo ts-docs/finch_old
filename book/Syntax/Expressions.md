@@ -42,6 +42,10 @@ variable1 <= variable2
 
 You can use `&&` (and) and `||` (or) to get a boolean result.
 
+```
+Hello {{rawName || name}}
+```
+
 ## Function calls
 
 You can call variables or path expressions (or even other function calls), and even pass parameters:
