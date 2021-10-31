@@ -14,11 +14,11 @@ pub enum FinchError {
     ErrInFunction,
     External(String),
     HelperNotFound(String),
+    NotNumbers,
     None
 }
 
 pub type FinchResult<T> = Result<T, FinchError>;
-
 
 impl std::fmt::Display for FinchError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -36,7 +36,8 @@ impl std::fmt::Display for FinchError {
             Self::NotCallable => write!(f, "Property is not callable."),
             Self::ErrInFunction => write!(f, "An error occured in a JS function"),
             Self::External(text) => write!(f, "{}", text),
-            Self::HelperNotFound(helper_name) => write!(f, "Couldn't find helper \"{}\"", helper_name)
+            Self::HelperNotFound(helper_name) => write!(f, "Couldn't find helper \"{}\"", helper_name),
+            Self::NotNumbers => write!(f, "Cannot use >, <, >=, <= on non-numbers")
         }
     }
 }

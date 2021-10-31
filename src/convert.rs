@@ -4,6 +4,11 @@ use neon::handle::{Handle, Root};
 use neon::context::{Context, FunctionContext};
 use neon::object::{Object};
 use std::rc::Rc;
+use std::cmp::Ordering;
+use crate::parser::ExpressionKind;
+use crate::compiler::CompilerContext;
+
+use crate::error::{FinchError, FinchResult};
 
 pub struct RawObject<T: Value>(Root<T>);
 
@@ -137,4 +142,29 @@ impl std::string::ToString for RawValue {
             Self::Function(_) => String::from("[function]")
         }
     }
+}
+
+pub fn compare_vals(left: &ExpressionKind, right: &ExpressionKind, ctx: &mut CompilerContext) -> FinchResult<Ordering> {
+    let num_left = if let ExpressionKind::Number(num) = left {
+        num.clone()
+    } else {
+        if let RawValue::Number(num) = left.compile(ctx)? {
+            num
+        } else {
+            return Err(FinchError::NotNumbers);
+        }
+    };
+    let num_right = if let ExpressionKind::Number(num) = right {
+        num.clone()
+    } else {
+        if let RawValue::Number(num) = right.compile(ctx)? {
+            num
+        } else {
+            return Err(FinchError::NotNumbers);
+        }
+    };
+    println!("{}, {}", num_left, num_right);
+    Ok(if num_left > num_right { Ordering::Greater }
+    else if num_left == num_right { Ordering::Equal }
+    else { Ordering::Less })
 }

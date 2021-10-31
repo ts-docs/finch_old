@@ -7,6 +7,7 @@ use neon::types::{JsObject, JsValue, JsFunction, JsArray};
 use neon::handle::{Handle, Root};
 use neon::object::Object;
 use neon::context::{FunctionContext, Context};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use crate::default_helpers;
 
@@ -188,10 +189,34 @@ impl ExpressionKind {
                 match &**exp {
                     BinaryOps::Compare(left, right) => {
                         Ok(RawValue::Boolean(left.compile(ctx)? == right.compile(ctx)?))
-                    }
+                    },
                     BinaryOps::Not(left, right) => {
                         Ok(RawValue::Boolean(!(left.compile(ctx)? == right.compile(ctx)?)))
-                    }
+                    },
+                    BinaryOps::Gt(left, right) => {
+                        Ok(match compare_vals(left, right, ctx)? {
+                            Ordering::Greater => RawValue::Boolean(true),
+                            Ordering::Equal | Ordering::Less => RawValue::Boolean(false)
+                        })
+                    },
+                    BinaryOps::Lt(left, right) => {
+                        Ok(match compare_vals(left, right, ctx)? {
+                            Ordering::Greater | Ordering::Equal => RawValue::Boolean(false),
+                            Ordering::Less => RawValue::Boolean(true)
+                        })
+                    },
+                    BinaryOps::Gte(left, right) => {
+                        Ok(match compare_vals(left, right, ctx)? {
+                            Ordering::Greater | Ordering::Equal => RawValue::Boolean(true),
+                            Ordering::Less => RawValue::Boolean(false)
+                        })
+                    },
+                    BinaryOps::Lte(left, right) => {
+                        Ok(match compare_vals(left, right, ctx)? {
+                            Ordering::Greater => RawValue::Boolean(false),
+                            Ordering::Equal | Ordering::Less => RawValue::Boolean(true)
+                        })
+                    },
                     _ => Ok(RawValue::Undefined)
                 }
             },
