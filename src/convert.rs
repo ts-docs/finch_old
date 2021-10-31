@@ -1,15 +1,15 @@
 
-use neon::types::{JsString, JsArray, JsBoolean, JsUndefined, JsNull, JsNumber, JsValue, JsObject};
+use neon::types::{JsString, JsArray, JsBoolean, JsUndefined, JsNull, JsNumber, JsValue, JsObject, Value, JsFunction};
 use neon::handle::{Handle, Root};
 use neon::context::{Context, FunctionContext};
 use neon::object::{Object};
 use std::rc::Rc;
 
-pub struct RawObject(Root<JsObject>);
+pub struct RawObject<T: Value>(Root<T>);
 
-impl PartialEq<RawObject> for RawObject {
+impl<T: Value> PartialEq<RawObject<T>> for RawObject<T> {
 
-    fn eq(&self, _other: &RawObject) -> bool {
+    fn eq(&self, _other: &RawObject<T>) -> bool {
         false
     }
 }
@@ -21,7 +21,8 @@ pub enum RawValue {
     Number(f64),
     Boolean(bool),
     Vec(Rc<Vec<RawValue>>),
-    Object(RawObject),
+    Object(RawObject<JsObject>),
+    Function(RawObject<JsFunction>),
     Undefined,
     Null
 }
@@ -35,6 +36,7 @@ impl RawValue {
             Self::Vec(v) => Self::Vec(v.clone()),
             Self::Boolean(bol) => Self::Boolean(*bol),
             Self::Object(obj) => Self::Object(RawObject(obj.0.clone(cx))),
+            Self::Function(func) => Self::Function(RawObject(func.0.clone(cx))),
             Self::Undefined => Self::Undefined,
             Self::Null => Self::Null
         }
@@ -66,6 +68,8 @@ impl<'a> IntoRawValue<'a> for Handle<'a, JsValue> {
             }
         } else if let Ok(obj_handle) = self.downcast::<JsObject, _>(cx) {
             RawValue::Object(RawObject(obj_handle.root(cx)))
+        } else if let Ok(fn_handle) = self.downcast::<JsFunction, _>(cx) {
+            RawValue::Function(RawObject(fn_handle.root(cx)))
         }
         else {
             RawValue::Undefined
@@ -89,7 +93,8 @@ impl RawValue {
                 };
                 arr.upcast::<JsValue>()
              },
-             RawValue::Object(obj) => obj.0.to_inner(cx).upcast::<JsValue>()
+             RawValue::Object(obj) => obj.0.to_inner(cx).upcast::<JsValue>(),
+             RawValue::Function(func) => func.0.to_inner(cx).upcast::<JsValue>()
         }
     }
 
@@ -99,7 +104,7 @@ impl RawValue {
             Self::Number(num) => *num == 0.0,
             Self::Boolean(bol) => !(*bol),
             Self::Null | Self::Undefined => true,
-            Self::Vec(_) | Self::Object(_) => false
+            Self::Vec(_) | Self::Object(_) | Self::Function(_) => false
         }
     }
 
@@ -111,7 +116,8 @@ impl RawValue {
             Self::Undefined => String::from("undefined"),
             Self::Null => String::from("null"),
             Self::Vec(v) => v.iter().map(|val| val.to_string()).collect::<Vec<String>>().join(", "),
-            Self::Object(_) => String::from("[object Object]")
+            Self::Object(_) => String::from("[object Object]"),
+            Self::Function(_) => String::from("[function]")
         }
     }
 
@@ -127,7 +133,8 @@ impl std::string::ToString for RawValue {
             Self::Undefined => String::from("undefined"),
             Self::Null => String::from("null"),
             Self::Vec(v) => v.iter().map(|val| val.to_string()).collect::<Vec<String>>().join(", "),
-            Self::Object(_) => String::from("[object Object]")
+            Self::Object(_) => String::from("[object Object]"),
+            Self::Function(_) => String::from("[function]")
         }
     }
 }

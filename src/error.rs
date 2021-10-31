@@ -10,12 +10,15 @@ pub enum FinchError {
     TemplateNotExist(String),
     InvalidArg(i32),
     ExpectedObject,
-    NotCallable(String),
-    ErrInFunction(String),
+    NotCallable,
+    ErrInFunction,
     External(String),
     HelperNotFound(String),
     None
 }
+
+pub type FinchResult<T> = Result<T, FinchError>;
+
 
 impl std::fmt::Display for FinchError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,8 +33,8 @@ impl std::fmt::Display for FinchError {
             Self::InvalidArg(n) => write!(f, "Argument {} is invalid", n),
             Self::TemplateNotExist(temp_name) => write!(f, "The template {} doesn't exist", temp_name),
             Self::ExpectedObject => write!(f, "Expected type object for dot notation."),
-            Self::NotCallable(var) => write!(f, "Property {} is not callable.", var),
-            Self::ErrInFunction(var) => write!(f, "An error occured in the {} function", var),
+            Self::NotCallable => write!(f, "Property is not callable."),
+            Self::ErrInFunction => write!(f, "An error occured in a JS function"),
             Self::External(text) => write!(f, "{}", text),
             Self::HelperNotFound(helper_name) => write!(f, "Couldn't find helper \"{}\"", helper_name)
         }

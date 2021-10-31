@@ -1,6 +1,6 @@
 
 use crate::parser::*;
-use crate::error::FinchError;
+use crate::error::{FinchError, FinchResult};
 use crate::convert::*;
 use crate::memory::*;
 use neon::types::{JsObject, JsValue, JsFunction, JsArray};
@@ -200,18 +200,13 @@ impl ExpressionKind {
                 for param in params {
                     mapped_params.push(param.compile_to_js(ctx)?)
                 }
-                match &**var {
-                    ExpressionKind::Var(name) => {
-                        let func = ctx.data.get(ctx.cx, name.as_str()).map_err(|_| FinchError::PropNotExist(name.to_string()))?;
-                        if let Ok(val) = func.downcast::<JsFunction, _>(ctx.cx) {
-                            let undefiend = ctx.cx.undefined();
-                            let return_val = val.call(ctx.cx, undefiend, mapped_params).map_err(|_| FinchError::ErrInFunction(name.to_string()))?;
-                            Ok(return_val.raw(ctx.cx))
-                        } else {
-                            Err(FinchError::NotCallable(name.to_string()))
-                        }
-                    }
-                    _ => Err(FinchError::None)
+                let callee = var.compile_to_js(ctx)?;
+                if let Ok(val) = callee.downcast::<JsFunction, _>(ctx.cx) {
+                    let undefiend = ctx.cx.undefined();
+                    let return_val = val.call(ctx.cx, undefiend, mapped_params).map_err(|_| FinchError::ErrInFunction)?;
+                    Ok(return_val.raw(ctx.cx))
+                } else {
+                    Err(FinchError::NotCallable)
                 }
             }
         }

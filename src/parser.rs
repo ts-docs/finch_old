@@ -4,7 +4,6 @@ use std::ops::Range;
 use crate::error::*;
 
 type Data<'a> = Peekable<std::str::CharIndices<'a>>;
-pub type FinchResult<R> = Result<R, FinchError>;
 
 static COMPARE_PREC: i8 = 5;
 static AND_PREC: i8 = 10;
@@ -190,50 +189,25 @@ impl<'a> Parser<'a> {
 
     pub fn parse_expression(&mut self) -> FinchResult<ExpressionKind> {
         let current = self.data.peek().ok_or(FinchError::None)?;
-        let thing = match current.1 {
-            '"' => ExpressionKind::String(self.parse_string()?),
-            '0'..='9' | '-' => ExpressionKind::Number(self.parse_number()?),
-            'a'..='z' | 'A'..='Z' | '_' | '$' => self.parse_possible_var()?,
+        match current.1 {
+            '"' => Ok(ExpressionKind::String(self.parse_string()?)),
+            '0'..='9' | '-' => Ok(ExpressionKind::Number(self.parse_number()?)),
+            'a'..='z' | 'A'..='Z' | '_' | '$' => Ok(self.parse_possible_var()?),
             ' ' => {
                 self.skip_while(' ');
-                self.parse_expression()?
+                Ok(self.parse_expression()?)
             },
             '(' => {
                 self.data.next();
                 let exp = self.parse_full_expression()?;
                 self.skip_token(')')?;
-                exp.1
+                Ok(exp.1)
             },
             '!' => {
                 self.data.next();
-                ExpressionKind::Unary(Box::new(UnaryOps::Not(self.parse_expression()?)))
+                Ok(ExpressionKind::Unary(Box::new(UnaryOps::Not(self.parse_expression()?))))
             },
             _ => return Err(FinchError::Unexpected(current.1))
-        };
-        let next = self.data.peek().ok_or(FinchError::None)?;
-        match next.1 {
-            '(' => { // function_call();
-                self.data.next();
-                let mut params: Vec<ExpressionKind> = vec![];
-                while let Some(ch) = self.data.peek() {
-                    match ch.1 {
-                        ' ' | ',' => {
-                            self.data.next();
-                            continue;
-                        },
-                        ')' => {
-                            self.data.next();
-                            return Ok(ExpressionKind::Call {
-                                var: Box::from(thing),
-                                params
-                            });
-                        }
-                        _ => params.push(self.parse_full_expression()?.1)
-                    }
-                }
-                Err(FinchError::None)
-            },
-            _ => Ok(thing)
         }
     }
 
@@ -301,6 +275,27 @@ impl<'a> Parser<'a> {
                     let right = self.parse_expression()?;
                     self.parse_possibly_binary(ExpressionKind::Binary(Box::new(BinaryOps::Lt(res, right))), COMPARE_PREC)
                 }
+            },
+            '(' => { // function_call();
+                self.data.next();
+                let mut params: Vec<ExpressionKind> = vec![];
+                while let Some(ch) = self.data.peek() {
+                    match ch.1 {
+                        ' ' | ',' => {
+                            self.data.next();
+                            continue;
+                        },
+                        ')' => {
+                            self.data.next();
+                            return self.parse_possibly_binary(ExpressionKind::Call {
+                                var: Box::from(res),
+                                params
+                            }, -1);
+                        }
+                        _ => params.push(self.parse_full_expression()?.1)
+                    }
+                }
+                Err(FinchError::None)
             },
             ' ' => {
                 self.skip_while(' ');
