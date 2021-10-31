@@ -24,7 +24,7 @@ pub fn init() -> HashMap<String, FnBlockHelper> {
 
     res.insert(String::from("template"), FnBlockHelper::Native(|block, ctx| {
         if block.block.is_some() { panic!("template block cannot have body") };
-        if let RawValue::String(temp_name) = block.params[0].compile(ctx)? {
+        if let ExpressionKind::String(temp_name) = &block.params[0] {
             let data = block.params[1].compile_to_js(ctx)?.downcast::<JsObject, _>(ctx.cx).map_err(|er| FinchError::External(er.to_string()))?;
             Ok(ctx.compiler.compile(ctx.cx, &temp_name, data)?)
         } else {

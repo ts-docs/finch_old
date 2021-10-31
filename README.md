@@ -15,7 +15,7 @@ console.log(Finch.compile("hello_world", {name: "Google", world: "Finch"}));
 // Hello Google, welcome to the world of Finch
 ```
 
-Check out the [official book](ts-docs.github.io/finch/) for complete examples, guides and features!
+Check out the [official book](https://ts-docs.github.io/finch) for complete examples, guides and features!
 
 ## Outlined Features
 
@@ -24,4 +24,4 @@ Check out the [official book](ts-docs.github.io/finch/) for complete examples, g
 - Simple, easy and readable templates.
 - Bootstrap JS right inside your templates.
 - Call JS functions inside templates.
-- Use the built-in handlers (each, if) or make your own.
+- Use the built-in helpers (each, if) or make your own.
