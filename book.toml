@@ -1,0 +1,11 @@
+[book]
+title = "Finch book"
+author = "GoogleFeud"
+description = "The finch guide book."
+src = "book"
+
+[build]
+build-dir = "docs"
+
+[rust]
+edition = "2018"
