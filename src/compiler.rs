@@ -165,7 +165,7 @@ impl ExpressionKind {
                 let mut dat = if let Some(thing) = ctx.cache.get(first) {
                     thing.js(ctx.cx)
                 } else if let Some(thing) = ctx.cache.get(&joined) {
-                    thing.js(ctx.cx)
+                    return Ok(thing.clone(ctx.cx));
                 }
                 else {
                     ctx.data.get(ctx.cx, first.as_str()).map_err(|_| FinchError::PropNotExist(first.to_string()))?

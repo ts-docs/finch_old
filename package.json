@@ -8,6 +8,8 @@
     "build-debug": "npm run build --",
     "build-release": "npm run build --",
     "install": "npm run build-release",
+    "benchmark": "node ./benchmarks/index.js",
+    "benchmark_raw": "node ./benchmarks/raw.js",
     "test": "cargo test"
   },
   "author": "GoogleFeud",
@@ -28,8 +30,5 @@
   "bugs": {
     "url": "https://github.com/ts-docs/finch/issues"
   },
-  "homepage": "https://github.com/ts-docs/finch#readme",
-  "dependencies": {
-    "handlebars": "^4.7.7"
-  }
+  "homepage": "https://github.com/ts-docs/finch#readme"
 }
