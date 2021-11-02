@@ -11,7 +11,7 @@
   "license": "ISC",
   "devDependencies": {
     "benchmark": "^2.1.4",
-    "ejs": "^3.1.6",
+    "eta": "^1.12.3",
     "handlebars": "^4.7.7"
   }
 }

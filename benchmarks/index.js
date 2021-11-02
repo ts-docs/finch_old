@@ -1,7 +1,7 @@
 
 const Finch = require("../");
 const Handlebars = require("handlebars");
-const Ejs = require("ejs");
+const Eta = require("eta");
 const Benchmark = require("benchmark");
 
 const Rendering = new Benchmark.Suite("Rendering");
@@ -33,7 +33,7 @@ Rendering.add("Parsing: Finch - simple template", () => {
 })
 
 .add("Parsing: Ejs - simple template", () => {
-    Ejs.compile("test", `
+    Eta.compile("test", `
         <div>
         <%= user.name %>
         <% if (name.age > 18) { %>
@@ -77,10 +77,10 @@ const testhb = Handlebars.compile(`
 </div>
 `);
 
-const testejs = Ejs.compile(`
+const testejs = Eta.compile(`
 <div>
-<%= user.name %>
-<% if (user.age > 18) { %>
+<%= it.user.name %>
+<% if (it.user.age > 18) { %>
     <p>User is over 18</p>
 <% } else { %>
     <p>User is under 18</p>
@@ -89,8 +89,6 @@ const testejs = Ejs.compile(`
 `);
 
 const Compilation = new Benchmark.Suite("Compilation");
-
-const arrayDat = [1, 2, 3, 4, 5];
 
 Compilation.add("Compilation: Finch", () => {
     Finch.compile("test_1", {
@@ -110,13 +108,13 @@ Compilation.add("Compilation: Finch", () => {
     })
 })
 
-.add("Compilation: Ejs", () => {
+.add("Compilation: Eta", () => {
     testejs({
         user: {
             name: "Google",
             age: 19
         }
-    });
+    }, Eta.getConfig());
 })
 
 .on('cycle', function(event) {
