@@ -5,6 +5,7 @@ mod convert;
 mod default_helpers;
 mod memory;
 mod compiler;
+mod transpiler;
 use compiler::Compiler;
 use std::{sync::Mutex};
 
